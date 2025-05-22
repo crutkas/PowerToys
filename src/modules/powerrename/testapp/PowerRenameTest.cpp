@@ -36,6 +36,9 @@ int APIENTRY wWinMain(
     HRESULT hr = CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
     if (SUCCEEDED(hr))
     {
+        // Uncomment to test metadata extraction functionality
+        // TestMetadataExtraction();
+
         // Set the application path based on the location of the dll
         std::wstring path = get_module_folderpath(g_hostHInst);
         path = path + L"\\PowerToys.PowerRename.exe";
