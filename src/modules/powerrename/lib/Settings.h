@@ -3,6 +3,12 @@
 #include <common/utils/json.h>
 #include <common/utils/gpo.h>
 
+enum DateFieldOption
+{
+    CreationDate = 0,
+    ModifiedDate = 1,
+};
+
 class CSettings
 {
 public:
@@ -91,6 +97,16 @@ public:
         WriteFlags();
     }
 
+    inline unsigned int GetDateFieldOption() const
+    {
+        return settings.dateFieldOption;
+    }
+
+    inline void SetDateFieldOption(unsigned int dateFieldOption)
+    {
+        settings.dateFieldOption = dateFieldOption;
+    }
+
     void Save();
     void Load();
 
@@ -105,6 +121,7 @@ private:
         bool MRUEnabled{ true };
         unsigned int maxMRUSize{ 10 };
         unsigned int flags{ 0 };
+        unsigned int dateFieldOption{ DateFieldOption::CreationDate }; // Default to creation date
     };
 
     void Reload();

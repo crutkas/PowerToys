@@ -9,6 +9,12 @@ using Settings.UI.Library.Attributes;
 
 namespace Microsoft.PowerToys.Settings.UI.Library
 {
+    public enum DateFieldOption
+    {
+        CreationDate = 0,
+        ModifiedDate = 1,
+    }
+
     public class PowerRenameProperties
     {
         public PowerRenameProperties()
@@ -19,6 +25,7 @@ namespace Microsoft.PowerToys.Settings.UI.Library
             ShowIcon = new BoolProperty();
             ExtendedContextMenuOnly = new BoolProperty();
             UseBoostLib = new BoolProperty();
+            DateFieldOption = new IntProperty();
         }
 
         [ObsoleteAttribute("Now controlled from the general settings", false)]
@@ -44,5 +51,8 @@ namespace Microsoft.PowerToys.Settings.UI.Library
 
         [JsonPropertyName("bool_use_boost_lib")]
         public BoolProperty UseBoostLib { get; set; }
+
+        [JsonPropertyName("int_date_field_option")]
+        public IntProperty DateFieldOption { get; set; }
     }
 }

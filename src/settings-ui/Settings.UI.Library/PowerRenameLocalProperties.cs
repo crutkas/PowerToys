@@ -18,6 +18,7 @@ namespace Microsoft.PowerToys.Settings.UI.Library
             ShowIcon = false;
             ExtendedContextMenuOnly = false;
             UseBoostLib = false;
+            DateFieldOption = (int)DateFieldOption.CreationDate; // Default to creation date
         }
 
         private int _maxSize;
@@ -51,6 +52,8 @@ namespace Microsoft.PowerToys.Settings.UI.Library
         public bool ExtendedContextMenuOnly { get; set; }
 
         public bool UseBoostLib { get; set; }
+
+        public int DateFieldOption { get; set; }
 
         public string ToJsonString()
         {

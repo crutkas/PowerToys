@@ -28,6 +28,7 @@ namespace
     const wchar_t c_useBoostLib[] = L"UseBoostLib";
     const wchar_t c_lastWindowWidth[] = L"LastWindowWidth";
     const wchar_t c_lastWindowHeight[] = L"LastWindowHeight";
+    const wchar_t c_dateFieldOption[] = L"DateFieldOption";
 
 }
 
@@ -51,6 +52,7 @@ void CSettings::Save()
     jsonData.SetNamedValue(c_mruEnabled, json::value(settings.MRUEnabled));
     jsonData.SetNamedValue(c_maxMRUSize, json::value(settings.maxMRUSize));
     jsonData.SetNamedValue(c_useBoostLib, json::value(settings.useBoostLib));
+    jsonData.SetNamedValue(c_dateFieldOption, json::value(settings.dateFieldOption));
 
     json::to_file(moduleJsonFilePath, jsonData);
     GetSystemTimeAsFileTime(&lastLoadedTime);
@@ -118,6 +120,7 @@ void CSettings::MigrateFromRegistry()
     settings.MRUEnabled = GetRegBoolean(c_mruEnabled, true);
     settings.maxMRUSize = GetRegNumber(c_maxMRUSize, 10);
     settings.flags = GetRegNumber(c_flags, 0);
+    settings.dateFieldOption = DateFieldOption::CreationDate; // Default to creation date for migrated settings
 
     LastRunSettingsInstance().SetSearchText(GetRegString(c_searchText, L""));
     LastRunSettingsInstance().SetReplaceText(GetRegString(c_replaceText, L""));
@@ -156,6 +159,10 @@ void CSettings::ParseJson()
             if (json::has(jsonSettings, c_useBoostLib, json::JsonValueType::Boolean))
             {
                 settings.useBoostLib = jsonSettings.GetNamedBoolean(c_useBoostLib);
+            }
+            if (json::has(jsonSettings, c_dateFieldOption, json::JsonValueType::Number))
+            {
+                settings.dateFieldOption = static_cast<unsigned int>(jsonSettings.GetNamedNumber(c_dateFieldOption));
             }
         }
         catch (const winrt::hresult_error&)

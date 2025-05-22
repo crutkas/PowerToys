@@ -70,17 +70,40 @@ IFACEMETHODIMP CPowerRenameItem::GetTime(_Outptr_ SYSTEMTIME* time)
         HANDLE hFile = CreateFileW(m_path, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, NULL);
         if (hFile != INVALID_HANDLE_VALUE)
         {
-            FILETIME CreationTime;
-            if (GetFileTime(hFile, &CreationTime, NULL, NULL))
+            FILETIME fileTime;
+            // Get the date based on the selected date field option
+            unsigned int dateFieldOption = CSettingsInstance().GetDateFieldOption();
+            if (dateFieldOption == DateFieldOption::ModifiedDate)
             {
-                SYSTEMTIME SystemTime, LocalTime;
-                if (FileTimeToSystemTime(&CreationTime, &SystemTime))
+                // Get the last write time (modified date)
+                if (GetFileTime(hFile, NULL, NULL, &fileTime))
                 {
-                    if (SystemTimeToTzSpecificLocalTime(NULL, &SystemTime, &LocalTime))
+                    SYSTEMTIME SystemTime, LocalTime;
+                    if (FileTimeToSystemTime(&fileTime, &SystemTime))
                     {
-                        m_time = LocalTime;
-                        m_isTimeParsed = true;
-                        hr = S_OK;
+                        if (SystemTimeToTzSpecificLocalTime(NULL, &SystemTime, &LocalTime))
+                        {
+                            m_time = LocalTime;
+                            m_isTimeParsed = true;
+                            hr = S_OK;
+                        }
+                    }
+                }
+            }
+            else
+            {
+                // Default to creation date
+                if (GetFileTime(hFile, &fileTime, NULL, NULL))
+                {
+                    SYSTEMTIME SystemTime, LocalTime;
+                    if (FileTimeToSystemTime(&fileTime, &SystemTime))
+                    {
+                        if (SystemTimeToTzSpecificLocalTime(NULL, &SystemTime, &LocalTime))
+                        {
+                            m_time = LocalTime;
+                            m_isTimeParsed = true;
+                            hr = S_OK;
+                        }
                     }
                 }
             }

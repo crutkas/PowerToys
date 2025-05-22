@@ -34,6 +34,7 @@ namespace Microsoft.PowerToys.Settings.UI.Library
             Properties.ShowIcon.Value = localProperties.ShowIcon;
             Properties.ExtendedContextMenuOnly.Value = localProperties.ExtendedContextMenuOnly;
             Properties.UseBoostLib.Value = localProperties.UseBoostLib;
+            Properties.DateFieldOption.Value = localProperties.DateFieldOption;
 
             Version = "1";
             Name = ModuleName;
