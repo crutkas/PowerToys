@@ -73,6 +73,8 @@ public:
     IFACEMETHOD(PutOriginalName)(_In_opt_ PCWSTR originalName) = 0;
     IFACEMETHOD(GetNewName)(_Outptr_ PWSTR * newName) = 0;
     IFACEMETHOD(PutNewName)(_In_opt_ PCWSTR newName) = 0;
+    IFACEMETHOD(GetFileProperty)(_In_ PCWSTR propertyName, _Outptr_ PWSTR* propertyValue) = 0;
+    IFACEMETHOD(GetImageProperty)(_In_ PCWSTR propertyName, _Outptr_ PWSTR* propertyValue) = 0;
     IFACEMETHOD(GetIsFolder)(_Out_ bool* isFolder) = 0;
     IFACEMETHOD(GetIsSubFolderContent)(_Out_ bool* isSubFolderContent) = 0;
     IFACEMETHOD(GetSelected)(_Out_ bool* selected) = 0;

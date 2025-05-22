@@ -22,6 +22,8 @@ public:
     IFACEMETHODIMP GetOriginalName(_Outptr_ PWSTR* originalName);
     IFACEMETHODIMP PutNewName(_In_opt_ PCWSTR newName);
     IFACEMETHODIMP GetNewName(_Outptr_ PWSTR* newName);
+    IFACEMETHODIMP GetFileProperty(_In_ PCWSTR propertyName, _Outptr_ PWSTR* propertyValue);
+    IFACEMETHODIMP GetImageProperty(_In_ PCWSTR propertyName, _Outptr_ PWSTR* propertyValue);
     IFACEMETHODIMP GetIsFolder(_Out_ bool* isFolder);
     IFACEMETHODIMP GetIsSubFolderContent(_Out_ bool* isSubFolderContent);
     IFACEMETHODIMP GetSelected(_Out_ bool* selected);

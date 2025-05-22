@@ -1,5 +1,9 @@
 #include "pch.h"
 #include "PowerRenameItem.h"
+#include <propkey.h>
+#include <propvarutil.h>
+#include <strsafe.h>
+#include <wincodec.h>
 
 int CPowerRenameItem::s_id = 0;
 
@@ -244,6 +248,216 @@ IFACEMETHODIMP CPowerRenameItem::Reset()
     CoTaskMemFree(m_newName);
     m_newName = nullptr;
     return S_OK;
+}
+
+IFACEMETHODIMP CPowerRenameItem::GetFileProperty(_In_ PCWSTR propertyName, _Outptr_ PWSTR* propertyValue)
+{
+    *propertyValue = nullptr;
+    
+    CSRWSharedAutoLock lock(&m_lock);
+    HRESULT hr = E_FAIL;
+    
+    IShellItem2* psi2 = nullptr;
+    IPropertyStore* pps = nullptr;
+    PROPERTYKEY propKey;
+    PROPVARIANT propVar;
+    PropVariantInit(&propVar);
+    
+    // Common property names to property key mapping
+    struct PropertyMapping {
+        PCWSTR name;
+        PROPERTYKEY key;
+    };
+    
+    static const PropertyMapping propertyMappings[] = {
+        { L"System.Size", PKEY_Size },
+        { L"System.ItemType", PKEY_ItemType },
+        { L"System.DateCreated", PKEY_DateCreated },
+        { L"System.DateModified", PKEY_DateModified },
+        { L"System.DateAccessed", PKEY_DateAccessed },
+        { L"System.FileAttributes", PKEY_FileAttributes },
+        { L"System.ComputerName", PKEY_ComputerName },
+        { L"System.Author", PKEY_Author },
+        { L"System.Title", PKEY_Title },
+        { L"System.Subject", PKEY_Subject },
+        { L"System.Keywords", PKEY_Keywords },
+        { L"System.Comment", PKEY_Comment },
+        { L"System.Copyright", PKEY_Copyright },
+        // Music file properties
+        { L"System.Music.AlbumTitle", PKEY_Music_AlbumTitle },
+        { L"System.Music.Artist", PKEY_Music_Artist },
+        { L"System.Music.Genre", PKEY_Music_Genre },
+        // Video file properties
+        { L"System.Video.FrameWidth", PKEY_Video_FrameWidth },
+        { L"System.Video.FrameHeight", PKEY_Video_FrameHeight },
+        { L"System.Video.FrameRate", PKEY_Video_FrameRate },
+        // Image file properties
+        { L"System.Image.Dimensions", PKEY_Image_Dimensions },
+        { L"System.Image.HorizontalSize", PKEY_Image_HorizontalSize },
+        { L"System.Image.VerticalSize", PKEY_Image_VerticalSize },
+        { L"System.Image.BitDepth", PKEY_Image_BitDepth },
+        // Document properties
+        { L"System.Document.PageCount", PKEY_Document_PageCount }
+    };
+    
+    // Convert property name to property key
+    bool found = false;
+    for (const auto& mapping : propertyMappings)
+    {
+        if (wcscmp(mapping.name, propertyName) == 0)
+        {
+            propKey = mapping.key;
+            found = true;
+            break;
+        }
+    }
+    
+    if (!found)
+    {
+        // If not found in our mapping, try to parse it
+        hr = PSGetPropertyKeyFromName(propertyName, &propKey);
+        if (FAILED(hr))
+        {
+            return hr;
+        }
+    }
+    
+    // Get the property from the shell item
+    hr = SHCreateItemFromParsingName(m_path, nullptr, IID_PPV_ARGS(&psi2));
+    if (SUCCEEDED(hr))
+    {
+        hr = psi2->GetPropertyStore(GPS_DEFAULT, IID_PPV_ARGS(&pps));
+        if (SUCCEEDED(hr))
+        {
+            hr = pps->GetValue(propKey, &propVar);
+            if (SUCCEEDED(hr))
+            {
+                PWSTR pszValue = nullptr;
+                hr = PropVariantToStringAlloc(propVar, &pszValue);
+                if (SUCCEEDED(hr) && pszValue != nullptr)
+                {
+                    *propertyValue = pszValue;
+                }
+            }
+            
+            pps->Release();
+        }
+        
+        psi2->Release();
+    }
+    
+    PropVariantClear(&propVar);
+    
+    return hr;
+}
+
+IFACEMETHODIMP CPowerRenameItem::GetImageProperty(_In_ PCWSTR propertyName, _Outptr_ PWSTR* propertyValue)
+{
+    *propertyValue = nullptr;
+    
+    CSRWSharedAutoLock lock(&m_lock);
+    HRESULT hr = E_FAIL;
+    
+    // Check if file is an image first
+    std::wstring ext = PathFindExtension(m_path);
+    if (ext.empty())
+    {
+        return E_FAIL;
+    }
+    
+    // Convert to lowercase for comparison
+    for (auto& c : ext)
+    {
+        c = towlower(c);
+    }
+    
+    // Check if this is an image file
+    if (ext != L".jpg" && ext != L".jpeg" && ext != L".png" && ext != L".gif" && 
+        ext != L".bmp" && ext != L".tiff" && ext != L".tif" && ext != L".heic")
+    {
+        return E_FAIL;
+    }
+    
+    // EXIF property names to property key mapping
+    struct ExifMapping {
+        PCWSTR name;
+        PCWSTR path;
+    };
+    
+    static const ExifMapping exifMappings[] = {
+        { L"System.Photo.ExposureTime", L"System.Photo.ExposureTime" },
+        { L"System.Photo.FNumber", L"System.Photo.FNumber" },
+        { L"System.Photo.ISOSpeed", L"System.Photo.ISOSpeed" },
+        { L"System.Photo.ExposureBias", L"System.Photo.ExposureBias" },
+        { L"System.Photo.FocalLength", L"System.Photo.FocalLength" },
+        { L"System.Photo.Flash", L"System.Photo.Flash" },
+        { L"System.Photo.Orientation", L"System.Photo.Orientation" },
+        { L"System.Photo.MeteringMode", L"System.Photo.MeteringMode" },
+        { L"System.Photo.LightSource", L"System.Photo.LightSource" },
+        { L"System.Photo.DateTaken", L"System.Photo.DateTaken" },
+        { L"System.Photo.CameraManufacturer", L"System.Photo.CameraManufacturer" },
+        { L"System.Photo.CameraModel", L"System.Photo.CameraModel" },
+        { L"System.Photo.FocalLengthInFilm", L"System.Photo.FocalLengthInFilm" },
+        { L"System.Photo.DigitalZoom", L"System.Photo.DigitalZoom" },
+        { L"System.GPS.Latitude", L"System.GPS.Latitude" },
+        { L"System.GPS.Longitude", L"System.GPS.Longitude" },
+        { L"System.GPS.Altitude", L"System.GPS.Altitude" },
+    };
+    
+    // Find the EXIF property by name
+    PCWSTR propertyPath = nullptr;
+    for (const auto& mapping : exifMappings)
+    {
+        if (wcscmp(mapping.name, propertyName) == 0)
+        {
+            propertyPath = mapping.path;
+            break;
+        }
+    }
+    
+    // If property is not in our mapping, use it directly
+    if (propertyPath == nullptr)
+    {
+        propertyPath = propertyName;
+    }
+    
+    // Get the EXIF property using property store
+    IShellItem2* psi2 = nullptr;
+    IPropertyStore* pps = nullptr;
+    PROPERTYKEY propKey;
+    PROPVARIANT propVar;
+    PropVariantInit(&propVar);
+    
+    hr = PSGetPropertyKeyFromName(propertyPath, &propKey);
+    if (SUCCEEDED(hr))
+    {
+        hr = SHCreateItemFromParsingName(m_path, nullptr, IID_PPV_ARGS(&psi2));
+        if (SUCCEEDED(hr))
+        {
+            hr = psi2->GetPropertyStore(GPS_DEFAULT, IID_PPV_ARGS(&pps));
+            if (SUCCEEDED(hr))
+            {
+                hr = pps->GetValue(propKey, &propVar);
+                if (SUCCEEDED(hr))
+                {
+                    PWSTR pszValue = nullptr;
+                    hr = PropVariantToStringAlloc(propVar, &pszValue);
+                    if (SUCCEEDED(hr) && pszValue != nullptr)
+                    {
+                        *propertyValue = pszValue;
+                    }
+                }
+                
+                pps->Release();
+            }
+            
+            psi2->Release();
+        }
+    }
+    
+    PropVariantClear(&propVar);
+    
+    return hr;
 }
 
 HRESULT CPowerRenameItem::s_CreateInstance(_In_opt_ IShellItem* psi, _In_ REFIID iid, _Outptr_ void** resultInterface)

@@ -414,6 +414,7 @@ HRESULT CPowerRenameRegEx::Replace(_In_ PCWSTR source, _Outptr_ PWSTR* result, u
 
         static const std::wregex zeroGroupRegex(L"(([^\\$]|^)(\\$\\$)*)\\$[0]");
         static const std::wregex otherGroupsRegex(L"(([^\\$]|^)(\\$\\$)*)\\$([1-9])");
+        static const std::wregex metadataRegex(L"\\$(file|exif)\\.(\\w+(?:\\.\\w+)*)\\$");
 
         if ((m_flags & EnumerateItems) || (m_flags & RandomizeItems))
         {
@@ -488,6 +489,82 @@ HRESULT CPowerRenameRegEx::Replace(_In_ PCWSTR source, _Outptr_ PWSTR* result, u
         }
 
         bool replacedSomething = false;
+        
+        // Process metadata tokens in the replace term
+        std::wsmatch metadataMatch;
+        std::wstring processedReplaceTerm = replaceTerm;
+        std::wstring::const_iterator searchStart(processedReplaceTerm.cbegin());
+        
+        // Get source item path from original source name
+        IPowerRenameItem* renameItem = static_cast<IPowerRenameItem*>(GetProp(GetActiveWindow(), L"PowerRenameItemPtr"));
+        
+        if (renameItem != nullptr)
+        {
+            // Find all metadata tokens and replace them with actual values
+            while (regex_search(searchStart, processedReplaceTerm.cend(), metadataMatch, metadataRegex))
+            {
+                std::wstring metadataType = metadataMatch[1].str();
+                std::wstring metadataName = metadataMatch[2].str();
+                
+                PWSTR propertyValue = nullptr;
+                bool propertyFound = false;
+                
+                // Handle file and EXIF metadata differently
+                if (metadataType == L"file")
+                {
+                    std::wstring propName = L"System.";
+                    propName += metadataName;
+                    
+                    if (SUCCEEDED(renameItem->GetFileProperty(propName.c_str(), &propertyValue)) && propertyValue != nullptr)
+                    {
+                        // Replace the token with the property value
+                        std::wstring fullToken = metadataMatch[0].str();
+                        size_t tokenPos = metadataMatch.position();
+                        processedReplaceTerm.replace(tokenPos, fullToken.length(), propertyValue);
+                        
+                        // Update search start position
+                        searchStart = processedReplaceTerm.cbegin() + tokenPos + wcslen(propertyValue);
+                        propertyFound = true;
+                        
+                        CoTaskMemFree(propertyValue);
+                    }
+                }
+                else if (metadataType == L"exif")
+                {
+                    std::wstring propName = L"System.Photo.";
+                    propName += metadataName;
+                    
+                    if (SUCCEEDED(renameItem->GetImageProperty(propName.c_str(), &propertyValue)) && propertyValue != nullptr)
+                    {
+                        // Replace the token with the property value
+                        std::wstring fullToken = metadataMatch[0].str();
+                        size_t tokenPos = metadataMatch.position();
+                        processedReplaceTerm.replace(tokenPos, fullToken.length(), propertyValue);
+                        
+                        // Update search start position
+                        searchStart = processedReplaceTerm.cbegin() + tokenPos + wcslen(propertyValue);
+                        propertyFound = true;
+                        
+                        CoTaskMemFree(propertyValue);
+                    }
+                }
+                
+                if (!propertyFound)
+                {
+                    // If property not found, remove the token
+                    std::wstring fullToken = metadataMatch[0].str();
+                    size_t tokenPos = metadataMatch.position();
+                    processedReplaceTerm.replace(tokenPos, fullToken.length(), L"");
+                    
+                    // Update search start position
+                    searchStart = processedReplaceTerm.cbegin() + tokenPos;
+                }
+            }
+            
+            // Use the processed replace term with metadata values
+            replaceTerm = processedReplaceTerm;
+        }
+        
         if (m_flags & UseRegularExpressions)
         {
             replaceTerm = regex_replace(replaceTerm, zeroGroupRegex, L"$1$$$0");
