@@ -281,6 +281,22 @@ namespace Microsoft.PowerToys.Settings.UI.Library
                 }
             }
         }
+        
+        private bool mouseButtonRemapper; // defaulting to off
+
+        [JsonPropertyName("MouseButtonRemapper")]
+        public bool MouseButtonRemapper
+        {
+            get => mouseButtonRemapper;
+            set
+            {
+                if (mouseButtonRemapper != value)
+                {
+                    LogTelemetryEvent(value);
+                    mouseButtonRemapper = value;
+                }
+            }
+        }
 
         private bool powerAccent; // defaulting to off
 

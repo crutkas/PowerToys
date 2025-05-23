@@ -25,8 +25,10 @@ namespace Microsoft.PowerToys.Settings.UI.ViewModels
         private MouseHighlighterSettings MouseHighlighterSettingsConfig { get; set; }
 
         private MousePointerCrosshairsSettings MousePointerCrosshairsSettingsConfig { get; set; }
+        
+        private MouseButtonRemapperSettings MouseButtonRemapperSettingsConfig { get; set; }
 
-        public MouseUtilsViewModel(ISettingsUtils settingsUtils, ISettingsRepository<GeneralSettings> settingsRepository, ISettingsRepository<FindMyMouseSettings> findMyMouseSettingsRepository, ISettingsRepository<MouseHighlighterSettings> mouseHighlighterSettingsRepository, ISettingsRepository<MouseJumpSettings> mouseJumpSettingsRepository, ISettingsRepository<MousePointerCrosshairsSettings> mousePointerCrosshairsSettingsRepository, Func<string, int> ipcMSGCallBackFunc)
+        public MouseUtilsViewModel(ISettingsUtils settingsUtils, ISettingsRepository<GeneralSettings> settingsRepository, ISettingsRepository<FindMyMouseSettings> findMyMouseSettingsRepository, ISettingsRepository<MouseHighlighterSettings> mouseHighlighterSettingsRepository, ISettingsRepository<MouseJumpSettings> mouseJumpSettingsRepository, ISettingsRepository<MousePointerCrosshairsSettings> mousePointerCrosshairsSettingsRepository, ISettingsRepository<MouseButtonRemapperSettings> mouseButtonRemapperSettingsRepository, Func<string, int> ipcMSGCallBackFunc)
         {
             SettingsUtils = settingsUtils;
 
@@ -103,6 +105,18 @@ namespace Microsoft.PowerToys.Settings.UI.ViewModels
             NativeMethods.SystemParametersInfo(NativeMethods.SPI_GETCLIENTAREAANIMATION, 0, ref isEnabled, 0);
             _isAnimationEnabledBySystem = isEnabled != 0;
 
+            // Initialize Mouse Button Remapper configuration
+            ArgumentNullException.ThrowIfNull(mouseButtonRemapperSettingsRepository);
+            
+            MouseButtonRemapperSettingsConfig = mouseButtonRemapperSettingsRepository.SettingsConfig;
+            _mouseButtonRemapperAutoActivate = MouseButtonRemapperSettingsConfig.Properties.AutoActivate.Value;
+            _mouseButtonRemapperLeftButtonMapping = MouseButtonRemapperSettingsConfig.Properties.LeftButtonMapping.Value;
+            _mouseButtonRemapperRightButtonMapping = MouseButtonRemapperSettingsConfig.Properties.RightButtonMapping.Value;
+            _mouseButtonRemapperMiddleButtonMapping = MouseButtonRemapperSettingsConfig.Properties.MiddleButtonMapping.Value;
+            _mouseButtonRemapperX1ButtonMapping = MouseButtonRemapperSettingsConfig.Properties.X1ButtonMapping.Value;
+            _mouseButtonRemapperX2ButtonMapping = MouseButtonRemapperSettingsConfig.Properties.X2ButtonMapping.Value;
+            _mouseButtonRemapperExcludedApps = MouseButtonRemapperSettingsConfig.Properties.ExcludedApps.Value;
+
             // set the callback functions value to handle outgoing IPC message.
             SendConfigMSG = ipcMSGCallBackFunc;
         }
@@ -145,6 +159,19 @@ namespace Microsoft.PowerToys.Settings.UI.ViewModels
             else
             {
                 _isMousePointerCrosshairsEnabled = GeneralSettingsConfig.Enabled.MousePointerCrosshairs;
+            }
+            
+            // Initialize Mouse Button Remapper enabled state
+            _mouseButtonRemapperEnabledGpoRuleConfiguration = GPOWrapper.GetConfiguredMouseButtonRemapperEnabledValue();
+            if (_mouseButtonRemapperEnabledGpoRuleConfiguration == GpoRuleConfigured.Disabled || _mouseButtonRemapperEnabledGpoRuleConfiguration == GpoRuleConfigured.Enabled)
+            {
+                // Get the enabled state from GPO.
+                _mouseButtonRemapperEnabledStateIsGPOConfigured = true;
+                _isMouseButtonRemapperEnabled = _mouseButtonRemapperEnabledGpoRuleConfiguration == GpoRuleConfigured.Enabled;
+            }
+            else
+            {
+                _isMouseButtonRemapperEnabled = GeneralSettingsConfig.Enabled.MouseButtonRemapper;
             }
         }
 
@@ -889,6 +916,191 @@ namespace Microsoft.PowerToys.Settings.UI.ViewModels
             OnPropertyChanged(nameof(IsMouseHighlighterEnabled));
             OnPropertyChanged(nameof(IsMouseJumpEnabled));
             OnPropertyChanged(nameof(IsMousePointerCrosshairsEnabled));
+            OnPropertyChanged(nameof(IsMouseButtonRemapperEnabled));
+        }
+
+        public bool IsMouseButtonRemapperEnabled
+        {
+            get => _isMouseButtonRemapperEnabled;
+            set
+            {
+                if (_mouseButtonRemapperEnabledStateIsGPOConfigured)
+                {
+                    // If it's GPO configured, shouldn't be able to change this state.
+                    return;
+                }
+
+                if (_isMouseButtonRemapperEnabled != value)
+                {
+                    _isMouseButtonRemapperEnabled = value;
+
+                    GeneralSettingsConfig.Enabled.MouseButtonRemapper = value;
+                    OnPropertyChanged(nameof(IsMouseButtonRemapperEnabled));
+
+                    OutGoingGeneralSettings outgoing = new OutGoingGeneralSettings(GeneralSettingsConfig);
+                    SendConfigMSG(outgoing.ToString());
+
+                    NotifyMouseButtonRemapperPropertyChanged();
+                }
+            }
+        }
+
+        public bool IsMouseButtonRemapperEnabledGpoConfigured
+        {
+            get => _mouseButtonRemapperEnabledStateIsGPOConfigured;
+        }
+
+        public HotkeySettings MouseButtonRemapperActivationShortcut
+        {
+            get
+            {
+                return MouseButtonRemapperSettingsConfig.Properties.ActivationShortcut;
+            }
+
+            set
+            {
+                if (MouseButtonRemapperSettingsConfig.Properties.ActivationShortcut != value)
+                {
+                    MouseButtonRemapperSettingsConfig.Properties.ActivationShortcut = value ?? MouseButtonRemapperSettingsConfig.Properties.DefaultActivationShortcut;
+                    NotifyMouseButtonRemapperPropertyChanged();
+                }
+            }
+        }
+
+        public bool MouseButtonRemapperAutoActivate
+        {
+            get
+            {
+                return _mouseButtonRemapperAutoActivate;
+            }
+
+            set
+            {
+                if (value != _mouseButtonRemapperAutoActivate)
+                {
+                    _mouseButtonRemapperAutoActivate = value;
+                    MouseButtonRemapperSettingsConfig.Properties.AutoActivate.Value = value;
+                    NotifyMouseButtonRemapperPropertyChanged();
+                }
+            }
+        }
+        
+        public string MouseButtonRemapperLeftButtonMapping
+        {
+            get
+            {
+                return _mouseButtonRemapperLeftButtonMapping;
+            }
+
+            set
+            {
+                if (value != _mouseButtonRemapperLeftButtonMapping)
+                {
+                    _mouseButtonRemapperLeftButtonMapping = value;
+                    MouseButtonRemapperSettingsConfig.Properties.LeftButtonMapping.Value = value;
+                    NotifyMouseButtonRemapperPropertyChanged();
+                }
+            }
+        }
+        
+        public string MouseButtonRemapperRightButtonMapping
+        {
+            get
+            {
+                return _mouseButtonRemapperRightButtonMapping;
+            }
+
+            set
+            {
+                if (value != _mouseButtonRemapperRightButtonMapping)
+                {
+                    _mouseButtonRemapperRightButtonMapping = value;
+                    MouseButtonRemapperSettingsConfig.Properties.RightButtonMapping.Value = value;
+                    NotifyMouseButtonRemapperPropertyChanged();
+                }
+            }
+        }
+        
+        public string MouseButtonRemapperMiddleButtonMapping
+        {
+            get
+            {
+                return _mouseButtonRemapperMiddleButtonMapping;
+            }
+
+            set
+            {
+                if (value != _mouseButtonRemapperMiddleButtonMapping)
+                {
+                    _mouseButtonRemapperMiddleButtonMapping = value;
+                    MouseButtonRemapperSettingsConfig.Properties.MiddleButtonMapping.Value = value;
+                    NotifyMouseButtonRemapperPropertyChanged();
+                }
+            }
+        }
+        
+        public string MouseButtonRemapperX1ButtonMapping
+        {
+            get
+            {
+                return _mouseButtonRemapperX1ButtonMapping;
+            }
+
+            set
+            {
+                if (value != _mouseButtonRemapperX1ButtonMapping)
+                {
+                    _mouseButtonRemapperX1ButtonMapping = value;
+                    MouseButtonRemapperSettingsConfig.Properties.X1ButtonMapping.Value = value;
+                    NotifyMouseButtonRemapperPropertyChanged();
+                }
+            }
+        }
+        
+        public string MouseButtonRemapperX2ButtonMapping
+        {
+            get
+            {
+                return _mouseButtonRemapperX2ButtonMapping;
+            }
+
+            set
+            {
+                if (value != _mouseButtonRemapperX2ButtonMapping)
+                {
+                    _mouseButtonRemapperX2ButtonMapping = value;
+                    MouseButtonRemapperSettingsConfig.Properties.X2ButtonMapping.Value = value;
+                    NotifyMouseButtonRemapperPropertyChanged();
+                }
+            }
+        }
+        
+        public string MouseButtonRemapperExcludedApps
+        {
+            get
+            {
+                return _mouseButtonRemapperExcludedApps;
+            }
+
+            set
+            {
+                if (value != _mouseButtonRemapperExcludedApps)
+                {
+                    _mouseButtonRemapperExcludedApps = value;
+                    MouseButtonRemapperSettingsConfig.Properties.ExcludedApps.Value = value;
+                    NotifyMouseButtonRemapperPropertyChanged();
+                }
+            }
+        }
+        
+        public void NotifyMouseButtonRemapperPropertyChanged([CallerMemberName] string propertyName = null)
+        {
+            OnPropertyChanged(propertyName);
+
+            SndMouseButtonRemapperSettings outsettings = new SndMouseButtonRemapperSettings(MouseButtonRemapperSettingsConfig);
+            SndModuleSettings<SndMouseButtonRemapperSettings> ipcMessage = new SndModuleSettings<SndMouseButtonRemapperSettings>(outsettings);
+            SendConfigMSG(ipcMessage.ToJsonString());
+            SettingsUtils.SaveSettings(MouseButtonRemapperSettingsConfig.ToJsonString(), MouseButtonRemapperSettings.ModuleName);
         }
 
         private Func<string, int> SendConfigMSG { get; }
@@ -935,5 +1147,17 @@ namespace Microsoft.PowerToys.Settings.UI.ViewModels
         private int _mousePointerCrosshairsFixedLength;
         private bool _mousePointerCrosshairsAutoActivate;
         private bool _isAnimationEnabledBySystem;
+        
+        // Mouse Button Remapper fields
+        private GpoRuleConfigured _mouseButtonRemapperEnabledGpoRuleConfiguration;
+        private bool _mouseButtonRemapperEnabledStateIsGPOConfigured;
+        private bool _isMouseButtonRemapperEnabled;
+        private bool _mouseButtonRemapperAutoActivate;
+        private string _mouseButtonRemapperLeftButtonMapping;
+        private string _mouseButtonRemapperRightButtonMapping;
+        private string _mouseButtonRemapperMiddleButtonMapping;
+        private string _mouseButtonRemapperX1ButtonMapping;
+        private string _mouseButtonRemapperX2ButtonMapping;
+        private string _mouseButtonRemapperExcludedApps;
     }
 }

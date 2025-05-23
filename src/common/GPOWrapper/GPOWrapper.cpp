@@ -100,6 +100,10 @@ namespace winrt::PowerToys::GPOWrapper::implementation
     {
         return static_cast<GpoRuleConfigured>(powertoys_gpo::getConfiguredMousePointerCrosshairsEnabledValue());
     }
+    GpoRuleConfigured GPOWrapper::GetConfiguredMouseButtonRemapperEnabledValue()
+    {
+        return static_cast<GpoRuleConfigured>(powertoys_gpo::getConfiguredMouseButtonRemapperEnabledValue());
+    }
     GpoRuleConfigured GPOWrapper::GetConfiguredPowerRenameEnabledValue()
     {
         return static_cast<GpoRuleConfigured>(powertoys_gpo::getConfiguredPowerRenameEnabledValue());

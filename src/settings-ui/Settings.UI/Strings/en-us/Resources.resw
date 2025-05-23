@@ -2528,6 +2528,15 @@ From there, simply click on one of the supported files in the File Explorer and 
     <value>Jump the mouse pointer quickly to anywhere on your desktop.</value>
     <comment>Mouse as in the hardware peripheral.</comment>
   </data>
+  
+  <data name="Oobe_MouseUtils_MouseButtonRemapper.Text" xml:space="preserve">
+    <value>Mouse Button Remapper</value>
+    <comment>Mouse as in the hardware peripheral.</comment>
+  </data>
+  <data name="Oobe_MouseUtils_MouseButtonRemapper_Description.Text" xml:space="preserve">
+    <value>Remap mouse buttons to other buttons, keyboard keys, or disable them.</value>
+    <comment>Mouse as in the hardware peripheral.</comment>
+  </data>
   <data name="Launch_Run.Content" xml:space="preserve">
     <value>Launch PowerToys Run</value>
   </data>
@@ -4215,6 +4224,48 @@ Activate by holding the key for the character you want to add an accent to, then
   </data>
   <data name="MouseUtils_AutoActivate.Content" xml:space="preserve">
     <value>Automatically activate on utility startup</value>
+  </data>
+  
+  <data name="MouseUtils_MouseButtonRemapper.Header" xml:space="preserve">
+    <value>Mouse Button Remapper</value>
+    <comment>Refers to the utility name</comment>
+  </data>
+  <data name="MouseUtils_MouseButtonRemapper.Description" xml:space="preserve">
+    <value>Mouse Button Remapper allows remapping mouse buttons to other buttons, keyboard keys, or disabled.</value>
+    <comment>"Mouse Button Remapper" is the name of the utility.</comment>
+  </data>
+  <data name="MouseUtils_Enable_MouseButtonRemapper.Header" xml:space="preserve">
+    <value>Enable Mouse Button Remapper</value>
+  </data>
+  <data name="MouseUtils_MouseButtonRemapper_ActivationShortcut.Header" xml:space="preserve">
+    <value>Activation shortcut</value>
+  </data>
+  <data name="MouseUtils_MouseButtonRemapper_ActivationShortcut.Description" xml:space="preserve">
+    <value>Customize the shortcut to enable/disable button remapping</value>
+  </data>
+  <data name="MouseUtils_MouseButtonRemapper_ButtonMappings.Header" xml:space="preserve">
+    <value>Button Mappings</value>
+  </data>
+  <data name="MouseUtils_MouseButtonRemapper_LeftButtonMapping.Header" xml:space="preserve">
+    <value>Left Button</value>
+  </data>
+  <data name="MouseUtils_MouseButtonRemapper_RightButtonMapping.Header" xml:space="preserve">
+    <value>Right Button</value>
+  </data>
+  <data name="MouseUtils_MouseButtonRemapper_MiddleButtonMapping.Header" xml:space="preserve">
+    <value>Middle Button</value>
+  </data>
+  <data name="MouseUtils_MouseButtonRemapper_X1ButtonMapping.Header" xml:space="preserve">
+    <value>X1/Forward Button</value>
+  </data>
+  <data name="MouseUtils_MouseButtonRemapper_X2ButtonMapping.Header" xml:space="preserve">
+    <value>X2/Backward Button</value>
+  </data>
+  <data name="MouseUtils_MouseButtonRemapper_ExcludedApps.Header" xml:space="preserve">
+    <value>Excluded applications</value>
+  </data>
+  <data name="MouseUtils_MouseButtonRemapper_ExcludedApps_TextBoxControl.Header" xml:space="preserve">
+    <value>Enter the names of applications (one per line) for which Mouse Button Remapper should be disabled</value>
   </data>
   <data name="Run_FindMorePlugins.Text" xml:space="preserve">
     <value>Find more plugins</value>

@@ -359,6 +359,91 @@
                         </tkcontrols:SettingsExpander.Items>
                     </tkcontrols:SettingsExpander>
                 </controls:SettingsGroup>
+
+                <controls:SettingsGroup x:Uid="MouseUtils_MouseButtonRemapper">
+                    <tkcontrols:SettingsCard
+                        x:Uid="MouseUtils_Enable_MouseButtonRemapper"
+                        HeaderIcon="{ui:FontIcon Glyph=&#xE706;}"
+                        IsEnabled="{x:Bind ViewModel.IsMouseButtonRemapperEnabledGpoConfigured, Mode=OneWay, Converter={StaticResource BoolNegationConverter}}">
+                        <ToggleSwitch x:Uid="ToggleSwitch" IsOn="{x:Bind ViewModel.IsMouseButtonRemapperEnabled, Mode=TwoWay}" />
+                    </tkcontrols:SettingsCard>
+                    <InfoBar
+                        x:Uid="GPO_SettingIsManaged"
+                        IsClosable="False"
+                        IsOpen="{x:Bind ViewModel.IsMouseButtonRemapperEnabledGpoConfigured, Mode=OneWay}"
+                        IsTabStop="{x:Bind ViewModel.IsMouseButtonRemapperEnabledGpoConfigured, Mode=OneWay}"
+                        Severity="Informational">
+                        <InfoBar.IconSource>
+                            <FontIconSource FontFamily="{StaticResource SymbolThemeFontFamily}" Glyph="&#xE72E;" />
+                        </InfoBar.IconSource>
+                    </InfoBar>
+                    <tkcontrols:SettingsExpander
+                        x:Uid="MouseUtils_MouseButtonRemapper_ActivationShortcut"
+                        HeaderIcon="{ui:FontIcon Glyph=&#xEDA7;}"
+                        IsEnabled="{x:Bind ViewModel.IsMouseButtonRemapperEnabled, Mode=OneWay}"
+                        IsExpanded="True">
+                        <controls:ShortcutControl MinWidth="{StaticResource SettingActionControlMinWidth}" HotkeySettings="{x:Bind Path=ViewModel.MouseButtonRemapperActivationShortcut, Mode=TwoWay}" />
+                        <tkcontrols:SettingsExpander.Items>
+                            <tkcontrols:SettingsCard ContentAlignment="Left">
+                                <CheckBox x:Uid="MouseUtils_AutoActivate" IsChecked="{x:Bind ViewModel.MouseButtonRemapperAutoActivate, Mode=TwoWay}" />
+                            </tkcontrols:SettingsCard>
+                        </tkcontrols:SettingsExpander.Items>
+                    </tkcontrols:SettingsExpander>
+
+                    <tkcontrols:SettingsExpander
+                        x:Uid="MouseUtils_MouseButtonRemapper_ButtonMappings"
+                        HeaderIcon="{ui:FontIcon Glyph=&#xE7C9;}"
+                        IsEnabled="{x:Bind ViewModel.IsMouseButtonRemapperEnabled, Mode=OneWay}">
+                        <tkcontrols:SettingsExpander.Items>
+                            <tkcontrols:SettingsCard x:Uid="MouseUtils_MouseButtonRemapper_LeftButtonMapping">
+                                <TextBox
+                                    MinWidth="{StaticResource SettingActionControlMinWidth}"
+                                    Text="{x:Bind ViewModel.MouseButtonRemapperLeftButtonMapping, Mode=TwoWay}" />
+                            </tkcontrols:SettingsCard>
+                            <tkcontrols:SettingsCard x:Uid="MouseUtils_MouseButtonRemapper_RightButtonMapping">
+                                <TextBox
+                                    MinWidth="{StaticResource SettingActionControlMinWidth}"
+                                    Text="{x:Bind ViewModel.MouseButtonRemapperRightButtonMapping, Mode=TwoWay}" />
+                            </tkcontrols:SettingsCard>
+                            <tkcontrols:SettingsCard x:Uid="MouseUtils_MouseButtonRemapper_MiddleButtonMapping">
+                                <TextBox
+                                    MinWidth="{StaticResource SettingActionControlMinWidth}"
+                                    Text="{x:Bind ViewModel.MouseButtonRemapperMiddleButtonMapping, Mode=TwoWay}" />
+                            </tkcontrols:SettingsCard>
+                            <tkcontrols:SettingsCard x:Uid="MouseUtils_MouseButtonRemapper_X1ButtonMapping">
+                                <TextBox
+                                    MinWidth="{StaticResource SettingActionControlMinWidth}"
+                                    Text="{x:Bind ViewModel.MouseButtonRemapperX1ButtonMapping, Mode=TwoWay}" />
+                            </tkcontrols:SettingsCard>
+                            <tkcontrols:SettingsCard x:Uid="MouseUtils_MouseButtonRemapper_X2ButtonMapping">
+                                <TextBox
+                                    MinWidth="{StaticResource SettingActionControlMinWidth}"
+                                    Text="{x:Bind ViewModel.MouseButtonRemapperX2ButtonMapping, Mode=TwoWay}" />
+                            </tkcontrols:SettingsCard>
+                        </tkcontrols:SettingsExpander.Items>
+                    </tkcontrols:SettingsExpander>
+
+                    <tkcontrols:SettingsExpander
+                        x:Uid="MouseUtils_MouseButtonRemapper_ExcludedApps"
+                        HeaderIcon="{ui:FontIcon Glyph=&#xECE4;}"
+                        IsEnabled="{x:Bind ViewModel.IsMouseButtonRemapperEnabled, Mode=OneWay}">
+                        <tkcontrols:SettingsExpander.Items>
+                            <tkcontrols:SettingsCard HorizontalContentAlignment="Stretch" ContentAlignment="Vertical">
+                                <TextBox
+                                    x:Uid="MouseUtils_MouseButtonRemapper_ExcludedApps_TextBoxControl"
+                                    MinWidth="240"
+                                    MinHeight="160"
+                                    AcceptsReturn="True"
+                                    IsEnabled="{x:Bind ViewModel.IsMouseButtonRemapperEnabled, Mode=OneWay}"
+                                    ScrollViewer.IsVerticalRailEnabled="True"
+                                    ScrollViewer.VerticalScrollBarVisibility="Visible"
+                                    ScrollViewer.VerticalScrollMode="Enabled"
+                                    Text="{x:Bind ViewModel.MouseButtonRemapperExcludedApps, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                    TextWrapping="Wrap" />
+                            </tkcontrols:SettingsCard>
+                        </tkcontrols:SettingsExpander.Items>
+                    </tkcontrols:SettingsExpander>
+                </controls:SettingsGroup>
             </StackPanel>
         </controls:SettingsPageControl.ModuleContent>
         <controls:SettingsPageControl.PrimaryLinks>
