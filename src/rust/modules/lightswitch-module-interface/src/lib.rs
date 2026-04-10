@@ -99,3 +99,63 @@ fn check_gpo(value_name: &str) -> GpoRuleConfigured {
 }
 
 powertoys_module_ffi::register_module!(Module::new);
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use powertoys_module_ffi::*;
+
+    #[test]
+    fn test_module_creates() {
+        let module = Module::new();
+        assert!(!module.is_enabled());
+    }
+
+    #[test]
+    fn test_name_and_key() {
+        let module = Module::new();
+        let name = wide_ptr_to_string(module.get_name());
+        let key = wide_ptr_to_string(module.get_key());
+        assert_eq!(name, "LightSwitch");
+        assert_eq!(key, "LightSwitch");
+    }
+
+    #[test]
+    fn test_enable_disable() {
+        let mut module = Module::new();
+        assert!(!module.is_enabled());
+        module.enabled.store(true, std::sync::atomic::Ordering::SeqCst);
+        assert!(module.is_enabled());
+        module.disable();
+        assert!(!module.is_enabled());
+    }
+
+    #[test]
+    fn test_gpo_default() {
+        let module = Module::new();
+        assert_eq!(module.gpo_policy_enabled_configuration(), GpoRuleConfigured::NotConfigured);
+    }
+
+    #[test]
+    fn test_register_macro_exports() {
+        let table_ptr = rust_module_create();
+        assert!(!table_ptr.is_null());
+        unsafe {
+            let table = &*table_ptr;
+            let name = wide_ptr_to_string((table.get_name)(table.context));
+            assert_eq!(name, "LightSwitch");
+            (table.destroy)(table.context);
+            let _ = Box::from_raw(table_ptr);
+        }
+    }
+
+    fn wide_ptr_to_string(ptr: *const u16) -> String {
+        if ptr.is_null() { return String::new(); }
+        unsafe {
+            let mut len = 0;
+            while *ptr.add(len) != 0 { len += 1; }
+            String::from_utf16_lossy(std::slice::from_raw_parts(ptr, len))
+        }
+    }
+}
