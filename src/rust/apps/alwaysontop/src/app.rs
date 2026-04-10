@@ -208,13 +208,11 @@ impl AlwaysOnTop {
         if self.settings.frame_enabled {
             if let Some(border) = WindowBorder::create(hwnd, self.hinstance, &self.settings) {
                 self.pinned_windows.insert(hwnd as isize, border);
+            } else {
+                self.pinned_windows.insert(hwnd as isize, WindowBorder::empty());
             }
         } else {
             self.pinned_windows.insert(hwnd as isize, WindowBorder::empty());
-        }
-
-        if self.settings.sound_enabled {
-            play_sound();
         }
     }
 
@@ -455,12 +453,15 @@ unsafe extern "system" fn win_event_proc(
     _id_event_thread: u32,
     _dwms_event_time: u32,
 ) {
-    // Only process window-level events (not child objects)
-    if id_object != 0 {
-        return;
-    }
-    if let Some(aot) = unsafe { AOT_INSTANCE.as_mut() } {
-        aot.handle_win_event(event, hwnd);
+    unsafe {
+        // Only process window-level events (OBJID_WINDOW = 0)
+        if id_object != 0 || hwnd.is_null() {
+            return;
+        }
+        let aot = AOT_INSTANCE.as_mut();
+        if let Some(a) = aot {
+            a.handle_win_event(event, hwnd);
+        }
     }
 }
 

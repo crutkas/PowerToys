@@ -46,8 +46,15 @@ public:
     virtual void destroy() = 0;
     virtual size_t get_hotkeys(Hotkey*, size_t) { return 0; }
 
-    // These two MUST be present to keep vtable layout correct
-    virtual int GetHotkeyEx() { return 0; }  // returns std::optional<HotkeyEx> in real code
+    // These two MUST be present to keep vtable layout correct.
+    // GetHotkeyEx returns std::optional<HotkeyEx> in the real code.
+    // We must match the return type exactly or MSVC uses a different
+    // calling convention (hidden sret pointer) that shifts vtable dispatch.
+    struct OptionalHotkeyEx {
+        bool has_value = false;
+        HotkeyEx value = {};
+    };
+    virtual OptionalHotkeyEx GetHotkeyEx() { return {}; }
     virtual void OnHotkeyEx() {}
 
     virtual bool on_hotkey(size_t) { return false; }

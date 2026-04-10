@@ -288,17 +288,25 @@ impl PowerToyModule for AlwaysOnTopModule {
     }
 
     fn on_hotkey(&mut self, hotkey_id: usize) -> bool {
+        // Debug: write to a file since stderr might be swallowed
+        let _ = std::fs::write(
+            format!("{}\\aot_hotkey_debug.txt", std::env::var("TEMP").unwrap_or_default()),
+            format!("on_hotkey called! id={}, enabled={}\n", hotkey_id, self.enabled.load(Ordering::SeqCst))
+        );
+
         if !self.enabled.load(Ordering::SeqCst) {
             return false;
         }
 
         match hotkey_id {
             0 => {
-                // Pin/Unpin: ensure process is running, then signal pin event
-                if !self.is_process_running() {
+                let running = self.is_process_running();
+                eprintln!("[AlwaysOnTop DLL] Pin hotkey! process_running={}", running);
+                if !running {
                     self.launch_process();
                 }
-                unsafe { windows_sys::Win32::System::Threading::SetEvent(self.pin_event) };
+                let result = unsafe { windows_sys::Win32::System::Threading::SetEvent(self.pin_event) };
+                eprintln!("[AlwaysOnTop DLL] SetEvent(pin) result={}", result);
                 true
             }
             1 | 2 => {

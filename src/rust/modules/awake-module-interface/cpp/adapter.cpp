@@ -10,7 +10,7 @@
 // When building inside PowerToys tree, use the real header.
 // When building standalone (cargo test), use the local minimal copy.
 #ifdef POWERTOYS_TREE
-#include <interface/powertoy_module_interface.h>
+#include <powertoy_module_interface.h>
 #else
 #include "powertoy_module_interface.h"
 #endif

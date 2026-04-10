@@ -120,6 +120,10 @@ mod tests {
     fn test_hotkey_is_repr_c() {
         let size = mem::size_of::<Hotkey>();
         assert!(size > 0, "Hotkey should have non-zero size");
+        // C++ layout: bool win(1) + bool ctrl(1) + bool shift(1) + bool alt(1) 
+        //           + unsigned char key(1) + pad(3) + int id(4) + bool isShown(1) + pad(3) = 16
+        eprintln!("Hotkey size: {} bytes", size);
+        assert_eq!(size, 16, "Hotkey should be 16 bytes matching C++ layout");
     }
 
     #[test]
