@@ -1,0 +1,13 @@
+[package]
+name = "cmdpal-module-interface"
+version = "0.1.0"
+edition = "2024"
+build = "build.rs"
+[lib]
+crate-type = ["cdylib", "staticlib"]
+[dependencies]
+powertoys-module-ffi = { path = "../../powertoys-module-ffi" }
+windows-sys = { workspace = true }
+serde_json = { workspace = true }
+[build-dependencies]
+cc = "1"
