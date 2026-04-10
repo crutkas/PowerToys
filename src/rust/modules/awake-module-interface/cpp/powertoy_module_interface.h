@@ -46,8 +46,10 @@ public:
     virtual void destroy() = 0;
     virtual size_t get_hotkeys(Hotkey*, size_t) { return 0; }
 
-    // These methods have defaults in the real interface but we don't
-    // need them for the adapter — they go straight to the base defaults.
+    // These two MUST be present to keep vtable layout correct
+    virtual int GetHotkeyEx() { return 0; }  // returns std::optional<HotkeyEx> in real code
+    virtual void OnHotkeyEx() {}
+
     virtual bool on_hotkey(size_t) { return false; }
     virtual bool keep_track_of_pressed_win_key() { return false; }
     virtual unsigned int milliseconds_win_key_must_be_pressed() { return 0; }
