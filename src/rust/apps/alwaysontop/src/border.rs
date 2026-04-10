@@ -48,8 +48,14 @@ impl WindowBorder {
         };
         if border_hwnd.is_null() { return None; }
 
+        let corner_radius = if settings.round_corners_enabled {
+            get_corner_radius(tracked_hwnd)
+        } else {
+            0.0
+        };
+
         let border = Self { border_hwnd };
-        border.render_border(w, h, settings);
+        border.render_border(w, h, settings, corner_radius);
 
         unsafe {
             let val: BOOL = 1;
@@ -61,7 +67,7 @@ impl WindowBorder {
         Some(border)
     }
 
-    fn render_border(&self, width: i32, height: i32, settings: &Settings) {
+    fn render_border(&self, width: i32, height: i32, settings: &Settings, corner_radius: f32) {
         if self.border_hwnd.is_null() || width <= 0 || height <= 0 { return; }
         unsafe {
             let screen_dc = GetDC(std::ptr::null_mut());
@@ -85,18 +91,47 @@ impl WindowBorder {
 
             let (r, g, b) = settings.frame_color_rgb();
             let alpha = ((settings.frame_opacity as u32 * 255) / 100) as u8;
-            let t = settings.frame_thickness;
+            let t = settings.frame_thickness as f32;
+            let radius = corner_radius;
+            let w = width as f32;
+            let h = height as f32;
             let pixels = std::slice::from_raw_parts_mut(bits as *mut u32, (width * height) as usize);
             let border_px = premultiply(b, g, r, alpha);
 
-            for y in 0..height {
-                for x in 0..width {
-                    let idx = (y * width + x) as usize;
-                    pixels[idx] = if x < t || x >= width - t || y < t || y >= height - t {
-                        border_px
+            for py in 0..height {
+                for px in 0..width {
+                    let idx = (py * width + px) as usize;
+                    let x = px as f32;
+                    let y = py as f32;
+
+                    if radius > 0.0 {
+                        // Rounded rectangle border using SDF (signed distance field)
+                        // Outer rounded rect
+                        let d_outer = rounded_rect_sdf(x, y, w, h, radius + t);
+                        // Inner rounded rect (radius shrinks by thickness)
+                        let inner_r = (radius - 1.0).max(0.0);
+                        let d_inner = rounded_rect_sdf(x - t, y - t, w - 2.0 * t, h - 2.0 * t, inner_r);
+
+                        // Inside outer AND outside inner = border region
+                        // Use anti-aliasing: smooth transition over ~1px
+                        let outer_alpha = smoothstep(0.5, -0.5, d_outer);
+                        let inner_alpha = smoothstep(-0.5, 0.5, d_inner);
+                        let border_alpha = outer_alpha * inner_alpha;
+
+                        if border_alpha > 0.01 {
+                            let a = (alpha as f32 * border_alpha) as u8;
+                            pixels[idx] = premultiply(b, g, r, a);
+                        } else {
+                            pixels[idx] = 0;
+                        }
                     } else {
-                        0
-                    };
+                        // Simple rectangular border
+                        pixels[idx] = if x < t || x >= w - t || y < t || y >= h - t {
+                            border_px
+                        } else {
+                            0
+                        };
+                    }
                 }
             }
 
@@ -128,7 +163,8 @@ impl WindowBorder {
             let w = rect.right - rect.left;
             let h = rect.bottom - rect.top;
             unsafe { SetWindowPos(self.border_hwnd, tracked_hwnd, rect.left, rect.top, w, h, SWP_NOACTIVATE); }
-            self.render_border(w, h, settings);
+            let radius = if settings.round_corners_enabled { get_corner_radius(tracked_hwnd) } else { 0.0 };
+            self.render_border(w, h, settings, radius);
         }
     }
 
@@ -140,6 +176,54 @@ impl WindowBorder {
 fn premultiply(b: u8, g: u8, r: u8, a: u8) -> u32 {
     let a32 = a as u32;
     ((a32 << 24) | (((r as u32) * a32 / 255) << 16) | (((g as u32) * a32 / 255) << 8) | ((b as u32) * a32 / 255))
+}
+
+/// Signed distance field for a rounded rectangle centered at (w/2, h/2).
+/// Returns negative inside the rect, positive outside.
+fn rounded_rect_sdf(px: f32, py: f32, w: f32, h: f32, radius: f32) -> f32 {
+    let cx = w / 2.0;
+    let cy = h / 2.0;
+    let half_w = w / 2.0 - radius;
+    let half_h = h / 2.0 - radius;
+
+    let dx = (px - cx).abs() - half_w;
+    let dy = (py - cy).abs() - half_h;
+
+    let outside = (dx.max(0.0) * dx.max(0.0) + dy.max(0.0) * dy.max(0.0)).sqrt();
+    let inside = dx.max(dy).min(0.0);
+
+    outside + inside - radius
+}
+
+/// Smooth interpolation between edges for anti-aliasing.
+fn smoothstep(edge0: f32, edge1: f32, x: f32) -> f32 {
+    let t = ((x - edge0) / (edge1 - edge0)).clamp(0.0, 1.0);
+    t * t * (3.0 - 2.0 * t)
+}
+
+/// Query the DWM corner preference for a window and return the radius in pixels.
+/// DWMWCP_ROUND → 8px, DWMWCP_ROUNDSMALL → 4px, else → 0.
+fn get_corner_radius(hwnd: HWND) -> f32 {
+    // DWMWA_WINDOW_CORNER_PREFERENCE = 33
+    const DWMWA_WINDOW_CORNER_PREFERENCE: u32 = 33;
+    let mut preference: u32 = 0;
+    let hr = unsafe {
+        DwmGetWindowAttribute(
+            hwnd,
+            DWMWA_WINDOW_CORNER_PREFERENCE,
+            &mut preference as *mut _ as *mut _,
+            std::mem::size_of::<u32>() as u32,
+        )
+    };
+    if hr != 0 {
+        // If the API fails (older Windows), default to rounded
+        return 8.0;
+    }
+    match preference {
+        2 => 8.0,  // DWMWCP_ROUND
+        3 => 4.0,  // DWMWCP_ROUNDSMALL
+        _ => 0.0,  // DWMWCP_DEFAULT (0) or DWMWCP_DONOTROUND (1)
+    }
 }
 
 fn get_frame_rect(hwnd: HWND, border_thickness: i32) -> Option<RECT> {
