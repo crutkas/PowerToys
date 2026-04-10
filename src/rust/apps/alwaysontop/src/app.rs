@@ -74,27 +74,42 @@ impl AlwaysOnTop {
         // Track already-topmost windows
         aot.start_tracking_topmost_windows();
 
-        // Start event listener thread
-        let pin_event = events[0] as usize;
-        let terminate_event = events[1] as usize;
-        let inc_event = events[2] as usize;
-        let dec_event = events[3] as usize;
-        let main_hwnd = aot.main_window as usize;
-
-        std::thread::spawn(move || {
-            event_listener_thread(
-                pin_event as *mut std::ffi::c_void,
-                terminate_event as *mut std::ffi::c_void,
-                inc_event as *mut std::ffi::c_void,
-                dec_event as *mut std::ffi::c_void,
-                main_hwnd as HWND,
-            );
-        });
-
-        unsafe { AOT_INSTANCE = &mut aot as *mut _ };
+        // Start the event listener thread AFTER set_instance is called from main
+        // (the thread is spawned in set_instance)
 
         Some(aot)
     }
+}
+
+/// Set the global instance pointer. Must be called from main() after the
+/// AlwaysOnTop value is in its final stack location.
+pub fn set_instance(aot: &mut AlwaysOnTop) {
+    unsafe { AOT_INSTANCE = aot as *mut _ };
+
+    // Now start the event listener thread
+    let pin_event = aot.event_handles[0] as usize;
+    let terminate_event = aot.event_handles[1] as usize;
+    let inc_event = aot.event_handles[2] as usize;
+    let dec_event = aot.event_handles[3] as usize;
+    let main_hwnd = aot.main_window as usize;
+
+    std::thread::spawn(move || {
+        event_listener_thread(
+            pin_event as *mut std::ffi::c_void,
+            terminate_event as *mut std::ffi::c_void,
+            inc_event as *mut std::ffi::c_void,
+            dec_event as *mut std::ffi::c_void,
+            main_hwnd as HWND,
+        );
+    });
+}
+
+/// Reset the terminate event to prevent stale signals from a previous run.
+pub fn reset_terminate_event(aot: &AlwaysOnTop) {
+    unsafe { ResetEvent(aot.event_handles[1]) };
+}
+
+impl AlwaysOnTop {
 
     fn init_main_window(&mut self) -> bool {
         let class_name = to_wide(WINDOW_CLASS);

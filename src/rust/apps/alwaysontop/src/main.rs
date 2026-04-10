@@ -25,8 +25,13 @@ fn main() {
     // Singleton mutex
     let mutex_name = to_wide("Local\\PowerToys_AlwaysOnTop_InstanceMutex");
     let mutex = unsafe { CreateMutexW(std::ptr::null(), 1, mutex_name.as_ptr()) };
-    if mutex.is_null() || unsafe { GetLastError() } == 183 {
+    if mutex.is_null() {
+        eprintln!("[AlwaysOnTop] Failed to create mutex");
+        return;
+    }
+    if unsafe { GetLastError() } == 183 {
         // ERROR_ALREADY_EXISTS — another instance is running
+        eprintln!("[AlwaysOnTop] Another instance already running, exiting");
         return;
     }
 
@@ -50,8 +55,19 @@ fn main() {
     let settings = settings::Settings::load();
     let mut aot = match app::AlwaysOnTop::new(settings) {
         Some(a) => a,
-        None => return,
+        None => {
+            eprintln!("[AlwaysOnTop] Failed to create app");
+            return;
+        }
     };
+
+    // IMPORTANT: Set the global instance pointer AFTER the value is in its
+    // final stack location. AlwaysOnTop::new() can't do this because the
+    // value moves when returned.
+    app::set_instance(&mut aot);
+
+    // Reset the terminate event in case it was left signaled from a previous run
+    app::reset_terminate_event(&aot);
 
     // Message loop
     unsafe {
