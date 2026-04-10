@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  MSBuild project that builds the Rust Awake module DLL via Cargo.
+  
+  This wraps `cargo build` and copies the output DLL to the PowerToys
+  bin directory with the expected name (PowerToys.AwakeModuleInterface.dll).
+  
+  Drop-in replacement for the C++ AwakeModuleInterface.vcxproj.
+-->
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
+  <PropertyGroup>
+    <ProjectGuid>{A1B2C3D4-E5F6-7890-ABCD-RUST0AWAKE01}</ProjectGuid>
+    <ProjectName>RustAwakeModuleInterface</ProjectName>
+    <RootNamespace>RustAwake</RootNamespace>
+
+    <!-- Match PowerToys output convention -->
+    <RepoRoot Condition="'$(RepoRoot)' == ''">$([MSBuild]::GetDirectoryNameOfFileAbove($(MSBuildProjectDirectory), 'PowerToys.slnx'))\</RepoRoot>
+    <Platform Condition="'$(Platform)' == ''">x64</Platform>
+    <Configuration Condition="'$(Configuration)' == ''">Release</Configuration>
+    <OutDir>$(RepoRoot)$(Platform)\$(Configuration)\</OutDir>
+
+    <!-- Rust workspace root -->
+    <RustWorkspaceDir>$(RepoRoot)src\rust\</RustWorkspaceDir>
+    <CargoTargetDir>$(RustWorkspaceDir)target\</CargoTargetDir>
+
+    <!-- Map MSBuild Configuration to Cargo profile -->
+    <CargoProfile Condition="'$(Configuration)' == 'Release'">release</CargoProfile>
+    <CargoProfile Condition="'$(Configuration)' != 'Release'">debug</CargoProfile>
+    <CargoProfileFlag Condition="'$(Configuration)' == 'Release'">--release</CargoProfileFlag>
+    <CargoProfileFlag Condition="'$(Configuration)' != 'Release'"></CargoProfileFlag>
+
+    <!-- Map MSBuild Platform to Rust target -->
+    <RustTarget Condition="'$(Platform)' == 'x64'">x86_64-pc-windows-msvc</RustTarget>
+    <RustTarget Condition="'$(Platform)' == 'ARM64'">aarch64-pc-windows-msvc</RustTarget>
+
+    <!-- Source and destination DLL names -->
+    <CargoDllName>awake_module_interface.dll</CargoDllName>
+    <TargetDllName>PowerToys.AwakeModuleInterface.dll</TargetDllName>
+    <CargoOutputDll>$(CargoTargetDir)$(RustTarget)\$(CargoProfile)\$(CargoDllName)</CargoOutputDll>
+    <FinalOutputDll>$(OutDir)$(TargetDllName)</FinalOutputDll>
+  </PropertyGroup>
+
+  <Target Name="Build" DependsOnTargets="CargoBuild;CopyOutput" />
+
+  <Target Name="CargoBuild">
+    <Message Importance="high" Text="Building Rust Awake module (target: $(RustTarget), profile: $(CargoProfile))..." />
+    <Exec
+      Command="cargo build -p awake-module-interface --target $(RustTarget) $(CargoProfileFlag)"
+      WorkingDirectory="$(RustWorkspaceDir)"
+      EnvironmentVariables="CARGO_TARGET_DIR=$(CargoTargetDir)" />
+  </Target>
+
+  <Target Name="CopyOutput" DependsOnTargets="CargoBuild">
+    <MakeDir Directories="$(OutDir)" />
+    <Copy SourceFiles="$(CargoOutputDll)" DestinationFiles="$(FinalOutputDll)" SkipUnchangedFiles="true" />
+    <Message Importance="high" Text="Copied $(CargoDllName) → $(FinalOutputDll)" />
+  </Target>
+
+  <Target Name="Clean">
+    <Message Importance="high" Text="Cleaning Rust build artifacts..." />
+    <Exec
+      Command="cargo clean -p awake-module-interface"
+      WorkingDirectory="$(RustWorkspaceDir)"
+      EnvironmentVariables="CARGO_TARGET_DIR=$(CargoTargetDir)"
+      IgnoreExitCode="true" />
+    <Delete Files="$(FinalOutputDll)" />
+  </Target>
+
+  <Target Name="Test" DependsOnTargets="CargoBuild">
+    <Message Importance="high" Text="Running Rust tests..." />
+    <Exec
+      Command="cargo test --workspace --target $(RustTarget)"
+      WorkingDirectory="$(RustWorkspaceDir)"
+      EnvironmentVariables="CARGO_TARGET_DIR=$(CargoTargetDir)" />
+  </Target>
+
+  <Target Name="Rebuild" DependsOnTargets="Clean;Build" />
+
+</Project>

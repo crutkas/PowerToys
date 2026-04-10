@@ -1,0 +1,15 @@
+[package]
+name = "powertoys-module-ffi"
+version = "0.1.0"
+edition = "2024"
+description = "FFI bridge between PowerToys C++ runner and Rust modules"
+
+[lib]
+crate-type = ["lib"]
+
+[dependencies]
+windows-sys = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+[dev-dependencies]

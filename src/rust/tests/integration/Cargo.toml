@@ -1,0 +1,13 @@
+[package]
+name = "powertoys-integration-tests"
+version = "0.1.0"
+edition = "2024"
+description = "Integration tests for PowerToys Rust module loading"
+
+[[test]]
+name = "test_dll_loading"
+path = "test_dll_loading.rs"
+
+[dependencies]
+powertoys-module-ffi = { path = "../../powertoys-module-ffi" }
+windows-sys = { workspace = true }
