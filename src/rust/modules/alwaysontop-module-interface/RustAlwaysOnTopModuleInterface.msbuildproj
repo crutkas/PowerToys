@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <ProjectGuid>{A1B2C3D4-E5F6-7890-ABCD-RUST0AOTOP01}</ProjectGuid>
+    <ProjectName>RustAlwaysOnTopModuleInterface</ProjectName>
+    <RepoRoot Condition="'$(RepoRoot)' == ''">$([MSBuild]::GetDirectoryNameOfFileAbove($(MSBuildProjectDirectory), 'PowerToys.slnx'))\</RepoRoot>
+    <Platform Condition="'$(Platform)' == ''">x64</Platform>
+    <Configuration Condition="'$(Configuration)' == ''">Release</Configuration>
+    <OutDir>$(RepoRoot)$(Platform)\$(Configuration)\</OutDir>
+    <RustWorkspaceDir>$(RepoRoot)src\rust\</RustWorkspaceDir>
+    <CargoTargetDir>$(RustWorkspaceDir)target\</CargoTargetDir>
+    <CargoProfile Condition="'$(Configuration)' == 'Release'">release</CargoProfile>
+    <CargoProfile Condition="'$(Configuration)' != 'Release'">debug</CargoProfile>
+    <CargoProfileFlag Condition="'$(Configuration)' == 'Release'">--release</CargoProfileFlag>
+    <CargoProfileFlag Condition="'$(Configuration)' != 'Release'"></CargoProfileFlag>
+    <RustTarget Condition="'$(Platform)' == 'x64'">x86_64-pc-windows-msvc</RustTarget>
+    <RustTarget Condition="'$(Platform)' == 'ARM64'">aarch64-pc-windows-msvc</RustTarget>
+    <CargoDllName>alwaysontop_module_interface.dll</CargoDllName>
+    <TargetDllName>PowerToys.AlwaysOnTopModuleInterface.dll</TargetDllName>
+    <CargoOutputDll>$(CargoTargetDir)$(RustTarget)\$(CargoProfile)\$(CargoDllName)</CargoOutputDll>
+    <FinalOutputDll>$(OutDir)$(TargetDllName)</FinalOutputDll>
+  </PropertyGroup>
+
+  <Target Name="Build" DependsOnTargets="CargoBuild;CopyOutput" />
+  <Target Name="CargoBuild">
+    <Message Importance="high" Text="Building Rust AlwaysOnTop module..." />
+    <Exec Command="cargo build -p alwaysontop-module-interface --target $(RustTarget) $(CargoProfileFlag)"
+          WorkingDirectory="$(RustWorkspaceDir)" EnvironmentVariables="CARGO_TARGET_DIR=$(CargoTargetDir)" />
+  </Target>
+  <Target Name="CopyOutput" DependsOnTargets="CargoBuild">
+    <MakeDir Directories="$(OutDir)" />
+    <Copy SourceFiles="$(CargoOutputDll)" DestinationFiles="$(FinalOutputDll)" SkipUnchangedFiles="true" />
+    <Message Importance="high" Text="Copied → $(FinalOutputDll)" />
+  </Target>
+  <Target Name="Clean">
+    <Exec Command="cargo clean -p alwaysontop-module-interface" WorkingDirectory="$(RustWorkspaceDir)"
+          EnvironmentVariables="CARGO_TARGET_DIR=$(CargoTargetDir)" IgnoreExitCode="true" />
+    <Delete Files="$(FinalOutputDll)" />
+  </Target>
+  <Target Name="Rebuild" DependsOnTargets="Clean;Build" />
+</Project>

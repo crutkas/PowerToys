@@ -3,6 +3,17 @@
 version = 4
 
 [[package]]
+name = "alwaysontop-module-interface"
+version = "0.1.0"
+dependencies = [
+ "cc",
+ "powertoys-module-ffi",
+ "serde",
+ "serde_json",
+ "windows-sys",
+]
+
+[[package]]
 name = "awake-module-interface"
 version = "0.1.0"
 dependencies = [

@@ -1,0 +1,18 @@
+[package]
+name = "alwaysontop-module-interface"
+version = "0.1.0"
+edition = "2024"
+description = "AlwaysOnTop module interface for PowerToys - Rust implementation"
+build = "build.rs"
+
+[lib]
+crate-type = ["cdylib", "staticlib"]
+
+[dependencies]
+powertoys-module-ffi = { path = "../../powertoys-module-ffi" }
+windows-sys = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+[build-dependencies]
+cc = "1"
