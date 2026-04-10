@@ -4,6 +4,7 @@ members = [
     "powertoys-module-ffi",
     "modules/awake-module-interface",
     "modules/alwaysontop-module-interface",
+    "apps/alwaysontop",
     "tests/integration",
 ]
 
