@@ -142,7 +142,6 @@ powertoys_module_ffi::register_module!(Module::new);
 #[cfg(test)]
 mod tests {
     use super::*;
-    use powertoys_module_ffi::*;
 
     #[test]
     fn test_module_creates() {

@@ -226,7 +226,7 @@ impl AlwaysOnTop {
         self.restore_window_alpha(hwnd);
 
         if self.settings.sound_enabled {
-            play_sound();
+            play_sound(SoundType::Off);
         }
     }
 
@@ -483,7 +483,17 @@ fn create_event(name: &str) -> *mut std::ffi::c_void {
     }
 }
 
-fn play_sound() {
-    // Play the default Windows notification sound
-    // MessageBeep requires Win32_Media feature; just skip sound for now
+fn play_sound(sound_type: SoundType) {
+    use windows_sys::Win32::Media::Audio::*;
+    let file = match sound_type {
+        SoundType::On => "Media\\Speech On.wav",
+        SoundType::Off => "Media\\Speech Sleep.wav",
+        SoundType::IncreaseOpacity => "Media\\Windows Hardware Insert.wav",
+        SoundType::DecreaseOpacity => "Media\\Windows Hardware Remove.wav",
+    };
+    let wide = powertoys_win32::string::to_wide(file);
+    unsafe { PlaySoundW(wide.as_ptr(), std::ptr::null_mut(), SND_FILENAME | SND_ASYNC); }
 }
+
+#[derive(Clone, Copy)]
+enum SoundType { On, Off, IncreaseOpacity, DecreaseOpacity }

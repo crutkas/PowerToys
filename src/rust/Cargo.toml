@@ -1,5 +1,6 @@
 [workspace]
 resolver = "2"
+exclude = ["libs/crosshairs-core"]
 members = [
     "powertoys-module-ffi",
     "modules/awake-module-interface",
@@ -35,6 +36,7 @@ members = [
     "libs/fancyzones-engine",
     "modules/highlighter-module-interface",
     "libs/highlighter-core",
+    "libs/crosshairs-core",
     "libs/findmymouse-core",
     "libs/cursorwrap-core",
     "libs/measuretool-core",
