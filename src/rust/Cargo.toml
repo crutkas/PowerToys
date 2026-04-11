@@ -32,12 +32,13 @@ members = [
     "libs/fancyzones-engine",
 ]
 
-# Release profile: optimize for size with LTO
+# Release profile: optimize for performance with LTO
 [profile.release]
-opt-level = "z"        # optimize for size over speed
-lto = true             # link-time optimization — eliminates dead code across crates
+opt-level = 3          # maximum speed optimization
+lto = true             # link-time optimization — cross-crate inlining
 codegen-units = 1      # single codegen unit — slower compile, better optimization
 strip = "symbols"      # strip debug symbols from binary
+panic = "abort"        # no unwind tables — smaller binary, less overhead
 panic = "abort"        # no unwind tables — smaller binary, less RAM
 
 [workspace.dependencies]
