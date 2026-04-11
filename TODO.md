@@ -99,7 +99,12 @@ Every fix follows: read C++ → write failing test → implement fix → test pa
 
 ### Future
 - [ ] ZoomIt (all tiers — after PT core is done)
-- [ ] Runner modernization (thin C++ shell + Rust core lib)
+
+### Runner Modernization (queued after bug fixes)
+- [ ] Analyze runner ~30% pure logic (hotkey conflict 471 LOC, settings 588 LOC)
+- [ ] Extract hotkey conflict detection to `runner-core` Rust crate
+- [ ] Extract settings parsing to `runner-core` Rust crate
+- [ ] Wire `runner-core` into C++ runner via FFI (runner stays C++, calls Rust for logic)
 
 ## 🚫 Not Porting (keep C++)
 
