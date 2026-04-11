@@ -36,8 +36,38 @@ Every fix follows: read C++ → write failing test → implement fix → test pa
 
 ## 🟡 Infrastructure
 - [ ] **Installer build** — blocked by pre-existing DSC COM error
-- [ ] **ARM64 CI** — needs rustup on ARM64 agent  
-- [ ] **3 unported module DLLs** — EnvironmentVariables, Hosts, MeasureTool
+- [ ] **ARM64 CI** — needs rustup on ARM64 agent
+
+## 📋 Unported C++ Components
+
+### Module Interface DLLs (not yet Rust)
+| Module | LOC | Status |
+|--------|-----|--------|
+| EnvironmentVariables | 293 | not started — simple settings module |
+| Hosts | 300 | not started — simple settings module |
+| MeasureTool (Screen Ruler) | 300 | not started — simple settings module |
+
+### Mouse Utilities (all C++)
+| Component | LOC | Rendering | Recommendation |
+|-----------|-----|-----------|---------------|
+| **FindMyMouse** DLL | 1,726 | WinRT Composition + XAML | Port activation/hook logic → Rust. Keep Composition overlay C++. |
+| **MouseHighlighter** DLL | 1,134 | Windows.UI Composition | Port hook logic → Rust. Keep CompositionSpriteShape C++. |
+| **MousePointerCrosshairs** DLL | 1,613 | Windows.UI Composition | Port hook logic → Rust. Keep Composition rendering C++. |
+| **CursorWrap** DLL | 1,179 | Headless | ✅ Port fully to Rust — pure logic, WH_MOUSE_LL hook, no UI. |
+| **MouseJump** Module Interface | 747 | Headless | Port to Rust (same pattern as other 15 DLLs). |
+| **MouseJumpUI** EXE | C# | GDI/WinForms | Keep existing UX. |
+
+### Other C++ EXEs
+| Component | LOC | Rendering | Recommendation |
+|-----------|-----|-----------|---------------|
+| **LightSwitchService** | 2,179 | Headless | ✅ Port — headless scheduler, registry ops |
+| **FileLocksmithCLI** | 2,437 | Headless | ✅ Port — CLI tool, process/handle enumeration |
+| **PowerAccentKeyboardService** | 1,500 | Headless + WH_KEYBOARD_LL | ✅ Port — keyboard hook service |
+| **CmdPalKeyboardService** | 500 | Headless | ✅ Port — small keyboard hook |
+| **CropAndLock** EXE | 1,899 | D2D + DWM Thumbnail | Keep C++ — D2D rendering |
+| **ShortcutGuide** EXE | 2,950 | D2D overlay | Keep C++ — D2D overlay |
+| **MeasureToolCore** | 5,000 | D2D + DirectX | Keep C++ — heavy D2D overlay |
+| **KeyboardManagerEngine** | 3,000 | Headless + hooks | Possible but complex — defer |
 
 ## 🟢 Shipped & Working
 - [x] All 15 module interface DLLs (vtable mismatch fixed across all 14 adapters)
