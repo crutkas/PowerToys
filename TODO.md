@@ -1,6 +1,6 @@
 # PowerToys Rust Port — TODO
 
-*Last updated: 2026-04-11 17:20 UTC*
+*Last updated: 2026-04-11 17:40 UTC*
 
 ## 🔴 Bug Tracker (test-first methodology)
 
@@ -24,15 +24,15 @@ Every fix follows: read C++ → write failing test → implement fix → test pa
 |----|-----------|-----|--------|
 | `aot-sound` | AlwaysOnTop | No sound on pin/unpin (PlaySoundW) | ✅ fixed |
 | `aot-file-watcher` | AlwaysOnTop | Settings don't auto-reload on file change | ✅ fixed |
-| `aot-system-menu` | AlwaysOnTop | No "Pin/Unpin" in title bar context menu | open |
+| `aot-system-menu` | AlwaysOnTop | No "Pin/Unpin" in title bar context menu | ✅ fixed |
 | `aot-game-mode` | AlwaysOnTop | Pins windows in full-screen games | ✅ fixed |
 | `aot-excluded-apps` | AlwaysOnTop | No exclusion list for apps | ✅ fixed |
 | `fz-app-history` | FancyZones | Windows forget zones across sessions | ✅ fixed |
 | `fz-display-change` | FancyZones | Zones not recalculated on monitor change | open |
-| `fz-editor` | FancyZones | Can't launch editor or reload layouts | open |
-| `fz-virtual-desktop` | FancyZones | No virtual desktop switch detection | open |
-| `update-progress` | Update EXE | No download progress (UI frozen) | open |
-| `ws-launcher-elevation` | Workspaces | Elevated apps fail without UAC retry | open |
+| `fz-editor` | FancyZones | Can't launch editor or reload layouts | ✅ fixed |
+| `fz-virtual-desktop` | FancyZones | No virtual desktop switch detection | ✅ fixed |
+| `update-progress` | Update EXE | No download progress (UI frozen) | ✅ fixed |
+| `ws-launcher-elevation` | Workspaces | Elevated apps fail without UAC retry | ✅ fixed |
 
 ## 🟡 Infrastructure
 - [ ] **Installer build** — blocked by pre-existing DSC COM error
