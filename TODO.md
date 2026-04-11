@@ -143,8 +143,8 @@ MeasureTool, CursorWrap, MouseHighlighter, FindMyMouse, Crosshairs.
 | Awake RAM | ~50 MB | 6.1 MB WS / 0.9 MB priv |
 | Runner RAM (private) | 87.5 MB | 47 MB |
 | Rust core logic crates | 0 | 15 |
-| Rust tests | 0 | ~790 |
-| C++ MSTest parity tests | 0 | 266 |
+| Rust tests | 0 | 790 |
+| C++ MSTest parity tests | 0 | 279 |
 | App EXEs (Rust) | 0 | 10+ |
 | Release opt level | size (z) | **performance (3)** |
 
