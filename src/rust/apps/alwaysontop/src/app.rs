@@ -1,5 +1,6 @@
 //! Core AlwaysOnTop logic: event hooks, pin/unpin, border management.
 
+use powertoys_win32::string::to_wide;
 use crate::border::WindowBorder;
 use crate::settings::Settings;
 use std::collections::HashMap;
@@ -22,10 +23,6 @@ const DECREASE_OPACITY_EVENT: &str =
 
 const WINDOW_CLASS: &str = "AlwaysOnTopWindow";
 const PINNED_PROP: &str = "AlwaysOnTop_Pinned";
-
-fn to_wide(s: &str) -> Vec<u16> {
-    s.encode_utf16().chain(std::iter::once(0)).collect()
-}
 
 pub struct AlwaysOnTop {
     main_window: HWND,

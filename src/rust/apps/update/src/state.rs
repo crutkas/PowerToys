@@ -17,10 +17,8 @@ pub struct UpdateState {
 }
 
 fn state_file_path() -> std::path::PathBuf {
-    let local = std::env::var("LOCALAPPDATA").unwrap_or_default();
-    std::path::PathBuf::from(local)
-        .join("Microsoft")
-        .join("PowerToys")
+    powertoys_win32::settings::base_dir()
+        .unwrap_or_else(|| std::path::PathBuf::from("."))
         .join("UpdateState.json")
 }
 

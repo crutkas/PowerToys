@@ -1,14 +1,11 @@
 //! Window border rendering using GDI on a layered window.
 
+use powertoys_win32::string::to_wide;
 use crate::settings::Settings;
 use windows_sys::Win32::Foundation::*;
 use windows_sys::Win32::Graphics::Dwm::*;
 use windows_sys::Win32::Graphics::Gdi::*;
 use windows_sys::Win32::UI::WindowsAndMessaging::*;
-
-fn to_wide(s: &str) -> Vec<u16> {
-    s.encode_utf16().chain(std::iter::once(0)).collect()
-}
 
 static BORDER_CLASS_REGISTERED: std::sync::Once = std::sync::Once::new();
 const BORDER_CLASS_NAME: &str = "AlwaysOnTop_Border_Rust";

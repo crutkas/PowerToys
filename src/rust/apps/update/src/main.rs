@@ -152,8 +152,8 @@ fn get_current_version() -> String {
 }
 
 fn get_download_dir() -> PathBuf {
-    let local = std::env::var("LOCALAPPDATA").unwrap_or_default();
-    PathBuf::from(local).join("Microsoft").join("PowerToys").join("Updates")
+    powertoys_win32::settings::module_dir("Updates")
+        .unwrap_or_else(|| PathBuf::from("."))
 }
 
 fn cleanup_old_installers() {

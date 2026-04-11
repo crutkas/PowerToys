@@ -268,6 +268,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "fancyzones-core"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "fancyzones-module-interface"
 version = "0.1.0"
 dependencies = [
@@ -468,6 +476,7 @@ dependencies = [
 name = "powertoys-actionrunner"
 version = "0.1.0"
 dependencies = [
+ "powertoys-win32",
  "windows-sys 0.59.0",
 ]
 
@@ -475,6 +484,7 @@ dependencies = [
 name = "powertoys-alwaysontop"
 version = "0.1.0"
 dependencies = [
+ "powertoys-win32",
  "serde",
  "serde_json",
  "windows-sys 0.59.0",
@@ -501,9 +511,19 @@ dependencies = [
 name = "powertoys-update"
 version = "0.1.0"
 dependencies = [
+ "powertoys-win32",
  "serde",
  "serde_json",
  "ureq",
+ "windows-sys 0.59.0",
+]
+
+[[package]]
+name = "powertoys-win32"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
  "windows-sys 0.59.0",
 ]
 

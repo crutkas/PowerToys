@@ -90,8 +90,9 @@ impl Settings {
     }
 
     fn settings_path() -> String {
-        let local = std::env::var("LOCALAPPDATA").unwrap_or_default();
-        format!("{}\\Microsoft\\PowerToys\\AlwaysOnTop\\settings.json", local)
+        powertoys_win32::settings::module_settings_path("AlwaysOnTop")
+            .map(|p| p.to_string_lossy().into_owned())
+            .unwrap_or_default()
     }
 }
 

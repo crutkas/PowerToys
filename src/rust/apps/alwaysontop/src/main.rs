@@ -10,6 +10,7 @@ mod border;
 mod settings;
 
 use std::sync::Mutex;
+use powertoys_win32::string::to_wide;
 use windows_sys::Win32::Foundation::*;
 use windows_sys::Win32::System::Threading::*;
 use windows_sys::Win32::UI::WindowsAndMessaging::*;
@@ -23,16 +24,17 @@ fn main() {
     let parent_pid: u32 = args.get(1).and_then(|s| s.parse().ok()).unwrap_or(0);
 
     // Singleton mutex
-    let mutex_name = to_wide("Local\\PowerToys_AlwaysOnTop_InstanceMutex");
-    let mutex = unsafe { CreateMutexW(std::ptr::null(), 1, mutex_name.as_ptr()) };
-    if mutex.is_null() {
-        eprintln!("[AlwaysOnTop] Failed to create mutex");
-        return;
-    }
-    if unsafe { GetLastError() } == 183 {
-        // ERROR_ALREADY_EXISTS — another instance is running
-        eprintln!("[AlwaysOnTop] Another instance already running, exiting");
-        return;
+    let app_mutex = powertoys_win32::mutex::AppMutex::create("Local\\PowerToys_AlwaysOnTop_InstanceMutex");
+    match &app_mutex {
+        Some(m) if m.already_running() => {
+            eprintln!("[AlwaysOnTop] Another instance already running, exiting");
+            return;
+        }
+        None => {
+            eprintln!("[AlwaysOnTop] Failed to create mutex");
+            return;
+        }
+        _ => {}
     }
 
     // Store main thread ID for posting quit messages
@@ -41,10 +43,8 @@ fn main() {
     // Watch parent process — exit when runner exits
     if parent_pid != 0 {
         std::thread::spawn(move || {
-            let handle = unsafe { OpenProcess(0x00100000, 0, parent_pid) }; // SYNCHRONIZE
-            if !handle.is_null() {
-                unsafe { WaitForSingleObject(handle, u32::MAX) };
-                unsafe { CloseHandle(handle) };
+            if let Some(proc) = powertoys_win32::process::ProcessHandle::open_for_wait(parent_pid) {
+                proc.wait_infinite();
             }
             let tid = *MAIN_THREAD_ID.lock().unwrap();
             unsafe { PostThreadMessageW(tid, WM_QUIT, 0, 0) };
@@ -81,8 +81,4 @@ fn main() {
         }
         aot.cleanup();
     }
-}
-
-fn to_wide(s: &str) -> Vec<u16> {
-    s.encode_utf16().chain(std::iter::once(0)).collect()
 }

@@ -9,6 +9,7 @@
 
 #![windows_subsystem = "windows"]
 
+use powertoys_win32::string::to_wide;
 use windows_sys::Win32::Foundation::*;
 use windows_sys::Win32::System::Memory::*;
 use windows_sys::Win32::System::Threading::*;
@@ -173,8 +174,4 @@ fn open_pid_mapping(name: &str) -> (HANDLE, *mut std::ffi::c_void) {
         let buf = MapViewOfFile(h_map, FILE_MAP_ALL_ACCESS, 0, 0, std::mem::size_of::<u32>());
         (h_map, buf.Value)
     }
-}
-
-fn to_wide(s: &str) -> Vec<u16> {
-    s.encode_utf16().chain(std::iter::once(0)).collect()
 }
