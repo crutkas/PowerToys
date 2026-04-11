@@ -63,8 +63,9 @@
 - IPC between Workspaces launcher ↔ arranger
 - Registry queries for packaged apps
 
-## 🚫 Not Porting
+## 🚫 Not Porting (keep C++)
 
+- **AlwaysOnTop EXE** — D2D border rendering + DWM blur matches OS perfectly. Rust DLL stays.
 - ShortcutGuide EXE (D2D overlay, working fine as C++)
 - ZoomIt recording subsystem (keep C++ for Media Foundation)
 - Settings UI (already C# WinUI3)
