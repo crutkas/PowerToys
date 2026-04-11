@@ -3,6 +3,7 @@
 pub mod work_area;
 pub mod drag_handler;
 pub mod snap;
+pub mod window_filter;
 
 #[cfg(windows)]
 pub mod overlay;

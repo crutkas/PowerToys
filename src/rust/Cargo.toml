@@ -39,6 +39,9 @@ members = [
     "libs/cursorwrap-core",
     "libs/measuretool-core",
     "modules/cursorwrap-module-interface",
+    "modules/environmentvariables-module-interface",
+    "modules/hosts-module-interface",
+    "modules/mousejump-module-interface",
 ]
 
 # Release profile: optimize for performance with LTO
