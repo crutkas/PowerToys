@@ -1,0 +1,11 @@
+[package]
+name = "poweraccent-core"
+version = "0.1.0"
+edition = "2024"
+description = "Core logic for PowerAccent: accent maps, key state machine, and settings"
+
+[workspace]
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"

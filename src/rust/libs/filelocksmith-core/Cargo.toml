@@ -1,0 +1,11 @@
+[package]
+name = "filelocksmith-core"
+version = "0.1.0"
+edition = "2024"
+description = "Core logic for FileLocksmith: path matching, handle info parsing, and process resolution"
+
+[workspace]
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"

@@ -1,0 +1,31 @@
+[package]
+name = "poweraccent-kbd"
+version = "0.1.0"
+edition = "2024"
+description = "PowerAccent keyboard hook service - intercepts keys and sends accent characters"
+
+[workspace]
+
+[[bin]]
+name = "poweraccent-kbd"
+path = "src/main.rs"
+
+[dependencies]
+poweraccent-core = { path = "../../libs/poweraccent-core" }
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.59", features = [
+    "Win32_Foundation",
+    "Win32_System_LibraryLoader",
+    "Win32_System_Threading",
+    "Win32_System_Diagnostics_ToolHelp",
+    "Win32_UI_WindowsAndMessaging",
+    "Win32_UI_Input_KeyboardAndMouse",
+] }
+
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true
