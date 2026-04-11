@@ -47,15 +47,15 @@ Every fix follows: read C++ → write failing test → implement fix → test pa
 | Hosts | 300 | not started — simple settings module |
 | MeasureTool (Screen Ruler) | 300 | not started — simple settings module |
 
-### Mouse Utilities (all C++)
+### Mouse Utilities (all C++ → Rust with D2D)
 | Component | LOC | Rendering | Recommendation |
 |-----------|-----|-----------|---------------|
-| **FindMyMouse** DLL | 1,726 | WinRT Composition + XAML | Port activation/hook logic → Rust. Keep Composition overlay C++. |
-| **MouseHighlighter** DLL | 1,134 | Windows.UI Composition | Port hook logic → Rust. Keep CompositionSpriteShape C++. |
-| **MousePointerCrosshairs** DLL | 1,613 | Windows.UI Composition | Port hook logic → Rust. Keep Composition rendering C++. |
-| **CursorWrap** DLL | 1,179 | Headless | ✅ Port fully to Rust — pure logic, WH_MOUSE_LL hook, no UI. |
-| **MouseJump** Module Interface | 747 | Headless | Port to Rust (same pattern as other 15 DLLs). |
-| **MouseJumpUI** EXE | C# | GDI/WinForms | Keep existing UX. |
+| **FindMyMouse** DLL | 1,726 | C++: WinRT Composition | ✅ Port fully — D2D radial gradient spotlight (same pattern as AOT) |
+| **MouseHighlighter** DLL | 1,134 | C++: Composition | ✅ Port fully — D2D FillEllipse for click circles |
+| **MousePointerCrosshairs** DLL | 1,613 | C++: Composition | ✅ Port fully — D2D DrawLine for crosshairs |
+| **CursorWrap** DLL | 1,179 | Headless | ✅ Port fully — pure logic, WH_MOUSE_LL hook, no UI |
+| **MouseJump** Module Interface | 747 | Headless | ✅ Port — same pattern as other 15 DLLs |
+| **MouseJumpUI** EXE | C# | GDI/WinForms | Keep existing UX |
 
 ### Other C++ EXEs
 | Component | LOC | Rendering | Recommendation |
@@ -66,7 +66,7 @@ Every fix follows: read C++ → write failing test → implement fix → test pa
 | **CmdPalKeyboardService** | 500 | Headless | ✅ Port — small keyboard hook |
 | **CropAndLock** EXE | 1,899 | D2D + DWM Thumbnail | Keep C++ — D2D rendering |
 | **ShortcutGuide** EXE | 2,950 | D2D overlay | Keep C++ — D2D overlay |
-| **MeasureToolCore** | 5,000 | D2D + DirectX | Keep C++ — heavy D2D overlay |
+| **MeasureToolCore** | 5,000 | D2D + DirectX | ✅ Port — D2D DrawLine + DirectWrite (same as FZ overlay) |
 | **KeyboardManagerEngine** | 3,000 | Headless + hooks | Possible but complex — defer |
 
 ## 🟢 Shipped & Working
