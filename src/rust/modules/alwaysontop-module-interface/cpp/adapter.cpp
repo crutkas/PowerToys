@@ -36,6 +36,8 @@ struct RustModuleFunctionTable {
     bool (*is_enabled_by_default)(void* ctx);
     bool (*keep_track_of_pressed_win_key)(void* ctx);
     unsigned int (*milliseconds_win_key_must_be_pressed)(void* ctx);
+    void (*on_hotkey_ex)(void* ctx);
+    bool (*get_hotkey_ex)(void* ctx, void* out);
     powertoys_gpo::gpo_rule_configured_t (*gpo_policy_enabled_configuration)(void* ctx);
 };
 
