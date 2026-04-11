@@ -6,7 +6,7 @@ edition = "2024"
 [workspace]
 
 [[bin]]
-name = "PowerToys.WorkspacesWindowArranger"
+name = "PowerToys_WorkspacesWindowArranger"
 path = "src/main.rs"
 
 [dependencies]

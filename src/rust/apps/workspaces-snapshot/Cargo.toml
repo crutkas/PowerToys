@@ -6,7 +6,7 @@ edition = "2024"
 [workspace]
 
 [[bin]]
-name = "PowerToys.WorkspacesSnapshotTool"
+name = "PowerToys_WorkspacesSnapshotTool"
 path = "src/main.rs"
 
 [dependencies]
