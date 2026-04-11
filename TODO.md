@@ -27,7 +27,7 @@ Every fix follows: read C++ → write failing test → implement fix → test pa
 | `aot-system-menu` | AlwaysOnTop | No "Pin/Unpin" in title bar context menu | open |
 | `aot-game-mode` | AlwaysOnTop | Pins windows in full-screen games | ✅ fixed |
 | `aot-excluded-apps` | AlwaysOnTop | No exclusion list for apps | ✅ fixed |
-| `fz-app-history` | FancyZones | Windows forget zones across sessions | open |
+| `fz-app-history` | FancyZones | Windows forget zones across sessions | ✅ fixed |
 | `fz-display-change` | FancyZones | Zones not recalculated on monitor change | open |
 | `fz-editor` | FancyZones | Can't launch editor or reload layouts | open |
 | `fz-virtual-desktop` | FancyZones | No virtual desktop switch detection | open |
