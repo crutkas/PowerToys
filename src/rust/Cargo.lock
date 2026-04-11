@@ -367,6 +367,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "powertoys-actionrunner"
+version = "0.1.0"
+dependencies = [
+ "windows-sys 0.59.0",
+]
+
+[[package]]
 name = "powertoys-alwaysontop"
 version = "0.1.0"
 dependencies = [

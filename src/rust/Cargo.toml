@@ -19,6 +19,7 @@ members = [
     "modules/zoomit-module-interface",
     "apps/alwaysontop",
     "apps/awake",
+    "apps/actionrunner",
     "tests/integration",
 ]
 

@@ -1,0 +1,19 @@
+[package]
+name = "powertoys-actionrunner"
+version = "0.1.0"
+edition = "2024"
+description = "PowerToys ActionRunner - launches processes at non-elevated level"
+
+[[bin]]
+name = "PowerToys-ActionRunner"
+path = "src/main.rs"
+
+[dependencies]
+windows-sys = { version = "0.59", features = [
+    "Win32_Foundation",
+    "Win32_System_Threading",
+    "Win32_System_Memory",
+    "Win32_UI_WindowsAndMessaging",
+    "Win32_Security",
+    "Win32_Storage_FileSystem",
+] }
