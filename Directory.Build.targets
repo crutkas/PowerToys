@@ -65,4 +65,13 @@
   <!-- Note: For C++ skipped test projects, build is effectively skipped by removing all compile items above.
        We don't define empty Build/Rebuild/Clean targets here because MSBuild Target definitions with Condition
        on the Target element still override the default targets even when condition is false. -->
+
+  <!-- Rust module build: runs after the C++ solution build completes.
+       Builds all Rust crates via Cargo and copies outputs over the C++ versions. -->
+  <Target Name="BuildRustModules" AfterTargets="Build"
+          Condition="'$(MSBuildProjectName)' == 'runner' and '$(SkipRustBuild)' != 'true'">
+    <Message Importance="high" Text="Building Rust modules..." />
+    <Exec Command="powershell -ExecutionPolicy Bypass -File &quot;$(RepoRoot)src\rust\Build-RustModules.ps1&quot; -Platform $(Platform) -Configuration $(Configuration)"
+          WorkingDirectory="$(RepoRoot)" />
+  </Target>
 </Project>
