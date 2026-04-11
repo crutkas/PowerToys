@@ -22,6 +22,8 @@ members = [
     "apps/actionrunner",
     "apps/update",
     "tests/integration",
+    "libs/powertoys-win32",
+    "libs/fancyzones-core",
 ]
 
 # Release profile: optimize for size with LTO
