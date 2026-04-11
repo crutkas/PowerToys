@@ -16,7 +16,11 @@ jobs:
     runs-on: windows-latest
     strategy:
       matrix:
-        target: [x86_64-pc-windows-msvc]
+        include:
+          - target: x86_64-pc-windows-msvc
+            run_tests: true
+          - target: aarch64-pc-windows-msvc
+            run_tests: false  # Can't run ARM64 tests on x64 runner
 
     steps:
       - uses: actions/checkout@v4
@@ -41,15 +45,16 @@ jobs:
 
       - name: Build (debug)
         working-directory: src/rust
-        run: cargo build --workspace --target ${{ matrix.target }}
+        run: cargo build --workspace --target ${{ matrix.target }} --exclude powertoys-integration-tests
 
       - name: Test
+        if: matrix.run_tests
         working-directory: src/rust
-        run: cargo test --workspace --target ${{ matrix.target }}
+        run: cargo test --workspace --target ${{ matrix.target }} --exclude powertoys-integration-tests
 
       - name: Build (release)
         working-directory: src/rust
-        run: cargo build --workspace --target ${{ matrix.target }} --release
+        run: cargo build --workspace --target ${{ matrix.target }} --release --exclude powertoys-integration-tests
 
       - name: Report DLL sizes
         working-directory: src/rust

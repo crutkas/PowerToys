@@ -249,3 +249,79 @@ unsafe extern "system" fn border_wnd_proc(hwnd: HWND, msg: u32, wparam: WPARAM, 
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_premultiply_opaque() {
+        let px = premultiply(255, 128, 0, 255);
+        // Fully opaque: channels unchanged
+        assert_eq!((px >> 24) & 0xFF, 255); // alpha
+        assert_eq!((px >> 16) & 0xFF, 0);   // R
+        assert_eq!((px >> 8) & 0xFF, 128);  // G
+        assert_eq!(px & 0xFF, 255);          // B
+    }
+
+    #[test]
+    fn test_premultiply_transparent() {
+        let px = premultiply(255, 128, 0, 0);
+        assert_eq!(px, 0); // Fully transparent = all zeros
+    }
+
+    #[test]
+    fn test_premultiply_half_alpha() {
+        let px = premultiply(200, 100, 50, 128);
+        let a = (px >> 24) & 0xFF;
+        let r = (px >> 16) & 0xFF;
+        let g = (px >> 8) & 0xFF;
+        let b = px & 0xFF;
+        assert_eq!(a, 128);
+        // Channels should be ~half their original values
+        assert!(r <= 25 && r >= 24);   // 50 * 128/255 ≈ 25
+        assert!(g <= 50 && g >= 49);   // 100 * 128/255 ≈ 50
+        assert!(b <= 100 && b >= 99);  // 200 * 128/255 ≈ 100
+    }
+
+    #[test]
+    fn test_sdf_center_is_inside() {
+        // Point at center of a 100x100 rect with radius 10 should be well inside
+        let d = rounded_rect_sdf(50.0, 50.0, 100.0, 100.0, 10.0);
+        assert!(d < 0.0, "Center should be inside (negative SDF)");
+    }
+
+    #[test]
+    fn test_sdf_outside_corner() {
+        // Point far outside should be positive
+        let d = rounded_rect_sdf(200.0, 200.0, 100.0, 100.0, 10.0);
+        assert!(d > 0.0, "Far outside should be positive SDF");
+    }
+
+    #[test]
+    fn test_sdf_on_edge() {
+        // Point on the edge of a 100x100 rect (no rounding)
+        let d = rounded_rect_sdf(0.0, 50.0, 100.0, 100.0, 0.0);
+        assert!((d.abs()) < 1.0, "Edge should be near zero SDF");
+    }
+
+    #[test]
+    fn test_smoothstep_boundaries() {
+        assert_eq!(smoothstep(0.0, 1.0, 0.0), 0.0);
+        assert_eq!(smoothstep(0.0, 1.0, 1.0), 1.0);
+        assert!((smoothstep(0.0, 1.0, 0.5) - 0.5).abs() < 0.01);
+    }
+
+    #[test]
+    fn test_smoothstep_clamped() {
+        assert_eq!(smoothstep(0.0, 1.0, -1.0), 0.0);
+        assert_eq!(smoothstep(0.0, 1.0, 2.0), 1.0);
+    }
+
+    #[test]
+    fn test_get_corner_radius_returns_reasonable_value() {
+        // With a null HWND, should return 8.0 (default fallback)
+        let r = get_corner_radius(std::ptr::null_mut());
+        assert!(r >= 0.0 && r <= 20.0);
+    }
+}

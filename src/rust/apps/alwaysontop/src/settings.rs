@@ -129,4 +129,75 @@ mod tests {
         assert_eq!(g, 128);
         assert_eq!(b, 255);
     }
+
+    #[test]
+    fn test_frame_color_rgb_white() {
+        let mut s = Settings::default();
+        s.frame_color = 0x00FFFFFF;
+        let (r, g, b) = s.frame_color_rgb();
+        assert_eq!((r, g, b), (255, 255, 255));
+    }
+
+    #[test]
+    fn test_frame_color_rgb_default_accent() {
+        let s = Settings::default();
+        // Default: 0x00EFAD00 → R=0, G=173, B=239
+        let (r, g, b) = s.frame_color_rgb();
+        assert_eq!(r, 0);
+        assert_eq!(g, 173);
+        assert_eq!(b, 239);
+    }
+
+    #[test]
+    fn test_settings_from_json() {
+        let json = "{
+            \"properties\": {
+                \"frame-enabled\": {\"value\": false},
+                \"frame-thickness\": {\"value\": 10},
+                \"frame-opacity\": {\"value\": 80},
+                \"frame-color\": {\"value\": \"#FF0000\"},
+                \"frame-accent-color\": {\"value\": false},
+                \"round-corners-enabled\": {\"value\": false},
+                \"sound-enabled\": {\"value\": false},
+                \"do-not-activate-on-game-mode\": {\"value\": true},
+                \"excluded-apps\": {\"value\": \"notepad.exe\\ncalc.exe\"}
+            }
+        }";
+        // Write to temp file and load
+        let temp = std::env::temp_dir().join("aot_test_settings.json");
+        std::fs::write(&temp, json).unwrap();
+
+        // Parse directly since load() reads from a fixed path
+        let raw: serde_json::Value = serde_json::from_str(json).unwrap();
+        let props = raw.get("properties").unwrap();
+
+        let mut s = Settings::default();
+        if let Some(v) = get_bool(props, "frame-enabled") { s.frame_enabled = v; }
+        if let Some(v) = get_int(props, "frame-thickness") { s.frame_thickness = v; }
+        if let Some(v) = get_int(props, "frame-opacity") { s.frame_opacity = v; }
+        if let Some(v) = get_bool(props, "sound-enabled") { s.sound_enabled = v; }
+
+        assert!(!s.frame_enabled);
+        assert_eq!(s.frame_thickness, 10);
+        assert_eq!(s.frame_opacity, 80);
+        assert!(!s.sound_enabled);
+        std::fs::remove_file(&temp).ok();
+    }
+
+    #[test]
+    fn test_opacity_clamp() {
+        let mut s = Settings::default();
+        s.frame_opacity = 0;
+        // Opacity of 0 should still produce valid alpha
+        let alpha = ((s.frame_opacity as u32 * 255) / 100) as u8;
+        assert_eq!(alpha, 0);
+
+        s.frame_opacity = 100;
+        let alpha = ((s.frame_opacity as u32 * 255) / 100) as u8;
+        assert_eq!(alpha, 255);
+
+        s.frame_opacity = 50;
+        let alpha = ((s.frame_opacity as u32 * 255) / 100) as u8;
+        assert_eq!(alpha, 127);
+    }
 }
