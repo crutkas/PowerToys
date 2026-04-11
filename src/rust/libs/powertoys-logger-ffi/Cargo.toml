@@ -1,0 +1,14 @@
+[package]
+name = "powertoys-logger-ffi"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[workspace]
+
+[dependencies]
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["fmt", "env-filter"] }
+tracing-appender = "0.2"
