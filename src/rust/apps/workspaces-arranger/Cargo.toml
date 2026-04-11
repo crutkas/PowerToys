@@ -1,29 +1,17 @@
 [package]
-name = "workspaces-window-arranger"
+name = "workspaces-arranger"
 version = "0.1.0"
 edition = "2024"
-description = "Arranges windows to match a workspace layout"
+
+[workspace]
 
 [[bin]]
-name = "PowerToys_WorkspacesWindowArranger"
+name = "PowerToys.WorkspacesWindowArranger"
 path = "src/main.rs"
 
 [dependencies]
 powertoys-win32 = { path = "../../libs/powertoys-win32" }
 workspaces-core = { path = "../../libs/workspaces-core" }
-serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-
-[target.'cfg(windows)'.dependencies]
-windows-sys = { version = "0.59", features = [
-    "Win32_Foundation",
-    "Win32_System_Threading",
-    "Win32_System_Com",
-    "Win32_UI_WindowsAndMessaging",
-    "Win32_Graphics_Gdi",
-    "Win32_Security",
-    "Win32_System_LibraryLoader",
-    "Win32_UI_Accessibility",
-    "Win32_System_Pipes",
-    "Win32_Storage_FileSystem",
-] }
+serde = { version = "1", features = ["derive"] }
+windows-sys = { version = "0.59", features = ["Win32_Foundation","Win32_System_Threading","Win32_UI_WindowsAndMessaging","Win32_Graphics_Gdi","Win32_Security"] }

@@ -1,25 +1,27 @@
 #![windows_subsystem = "windows"]
 
-//! WorkspacesLauncher — launches apps in a workspace and coordinates with window arranger.
-//!
-//! Ported from C++ WorkspacesLauncher.
-
-mod app_launcher;
-mod gpo;
-mod ipc;
-mod launcher;
-mod launcher_ui_helper;
-mod registry_utils;
-mod window_arranger_helper;
+//! WorkspacesLauncher — launches apps in a workspace.
 
 use powertoys_win32::mutex::AppMutex;
 use powertoys_win32::settings;
-use workspaces_core::data;
+use powertoys_win32::string::to_wide;
+use workspaces_core::app_utils::{build_launch_args, AppData};
+use workspaces_core::data::{self, Workspace};
+use workspaces_core::launch_status::LaunchStatus;
+
+use windows_sys::Win32::Foundation::{CloseHandle, GetLastError};
+use windows_sys::Win32::System::Threading::{
+    CreateProcessW, PROCESS_INFORMATION, STARTUPINFOW,
+};
+use windows_sys::Win32::UI::Shell::{
+    ShellExecuteExW, SEE_MASK_NOCLOSEPROCESS, SEE_MASK_NO_CONSOLE, SHELLEXECUTEINFOW,
+};
 
 unsafe extern "system" {
     fn SetProcessDpiAwarenessContext(value: isize) -> i32;
     fn CoInitializeEx(reserved: *const std::ffi::c_void, coinit: u32) -> i32;
     fn CoUninitialize();
+    fn CoCreateGuid(guid: *mut Guid) -> i32;
 }
 const DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2: isize = -4;
 const COINIT_MULTITHREADED: u32 = 0;
@@ -32,213 +34,208 @@ struct Guid {
     data4: [u8; 8],
 }
 
-unsafe extern "system" {
-    fn CoCreateGuid(guid: *mut Guid) -> i32;
-}
-
 const INSTANCE_MUTEX_NAME: &str = r"Local\PowerToys_WorkspacesLauncher_InstanceMutex";
 
 fn main() -> std::process::ExitCode {
-    if gpo::is_policy_disabled() {
-        eprintln!("Workspaces Launcher: disabled by GPO policy");
-        return std::process::ExitCode::FAILURE;
-    }
-
-    // Set DPI awareness and initialize COM
     unsafe {
         SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
         let hr = CoInitializeEx(std::ptr::null(), COINIT_MULTITHREADED);
         if hr < 0 {
-            eprintln!("Workspaces Launcher: COM init failed: 0x{:08x}", hr);
+            eprintln!("Workspaces Launcher: COM init failed: 0x{hr:08x}");
             return std::process::ExitCode::FAILURE;
         }
     }
 
-    // Parse command line: workspace-id [invoke-point] [restarted]
+    // Singleton mutex — only one launcher at a time.
+    let mutex = AppMutex::create(INSTANCE_MUTEX_NAME);
+    if let Some(ref m) = mutex {
+        if m.already_running() {
+            eprintln!("Workspaces Launcher: another instance is running");
+            unsafe { CoUninitialize() };
+            return std::process::ExitCode::SUCCESS;
+        }
+    }
+
+    // Parse command line: workspace-id [invoke-point]
     let args: Vec<String> = std::env::args().collect();
     let workspace_id = match args.get(1) {
         Some(id) if !id.is_empty() => id.clone(),
         _ => {
             eprintln!("Workspaces Launcher: missing workspace ID argument");
-            unsafe { CoUninitialize(); }
+            unsafe { CoUninitialize() };
             return std::process::ExitCode::FAILURE;
         }
     };
 
     let invoke_point = args.get(2).map(|s| s.as_str()).unwrap_or("");
     let is_launch_and_edit = invoke_point == "LaunchAndEdit";
-    let is_restarted = args.iter().any(|a| a == "restarted");
 
-    // Check elevation — restart non-elevated if needed
-    if !is_restarted && is_current_process_elevated() {
-        eprintln!("Workspaces Launcher: elevated, restarting non-elevated");
-        if restart_non_elevated(&args) {
-            unsafe { CoUninitialize(); }
-            return std::process::ExitCode::from(1);
-        }
-    }
-
-    // Singleton mutex — only one launcher at a time
-    let mutex = AppMutex::create(INSTANCE_MUTEX_NAME);
-    if let Some(ref m) = mutex {
-        if m.already_running() {
-            eprintln!("Workspaces Launcher: another instance is running");
-            unsafe { CoUninitialize(); }
-            return std::process::ExitCode::SUCCESS;
-        }
-    }
-
-    // Load workspace
     let base_dir = settings::module_dir("Workspaces")
         .map(|p| p.to_string_lossy().into_owned())
         .unwrap_or_default();
 
-    let (_workspaces, workspace) = load_workspace(&base_dir, &workspace_id, is_launch_and_edit);
-    let workspace = match workspace {
+    let mut workspace = match load_workspace(&base_dir, &workspace_id, is_launch_and_edit) {
         Some(ws) => ws,
         None => {
-            eprintln!("Workspaces Launcher: workspace '{}' not found", workspace_id);
-            unsafe { CoUninitialize(); }
+            eprintln!("Workspaces Launcher: workspace '{workspace_id}' not found");
+            unsafe { CoUninitialize() };
             return std::process::ExitCode::FAILURE;
         }
     };
 
     eprintln!(
-        "Workspaces Launcher: launching workspace '{}' with {} apps",
+        "Workspaces Launcher: launching '{}' with {} apps",
         workspace.name,
         workspace.apps.len()
     );
 
-    // Ensure all apps have IDs
-    let mut workspace = workspace;
-    let mut _updated = false;
+    // Ensure all apps have IDs.
     for app in &mut workspace.apps {
         if app.id.is_empty() {
             app.id = generate_guid();
-            _updated = true;
         }
     }
 
-    // Run the launcher
-    launcher::run(workspace, &base_dir, is_launch_and_edit);
+    let app_ids: Vec<String> = workspace.apps.iter().map(|a| a.id.clone()).collect();
+    let mut status = LaunchStatus::new(&app_ids);
 
-    // Cleanup
-    unsafe { CoUninitialize(); }
+    // Launch each app.
+    for app in &workspace.apps {
+        let app_data = AppData {
+            name: app.name.clone(),
+            install_path: app.path.clone(),
+            package_full_name: app.package_full_name.clone(),
+            app_user_model_id: app.app_user_model_id.clone(),
+            pwa_app_id: app.pwa_app_id.clone(),
+            ..Default::default()
+        };
+
+        let launch_cmd = build_launch_args(&app_data, &app.command_line_args);
+        eprintln!(
+            "Workspaces Launcher: launching '{}' -> {}",
+            app.name, launch_cmd.executable
+        );
+
+        let ok = if launch_cmd.use_shell_execute {
+            shell_execute(&launch_cmd.executable, &launch_cmd.args, app.is_elevated)
+        } else {
+            create_process(&launch_cmd.executable, &launch_cmd.args)
+        };
+
+        if ok {
+            status.mark_launched(&app.id);
+        } else {
+            status.mark_failed(&app.id);
+            eprintln!("Workspaces Launcher: failed to launch '{}'", app.name);
+        }
+
+        std::thread::sleep(std::time::Duration::from_millis(300));
+    }
+
+    eprintln!(
+        "Workspaces Launcher: {} launched, {} failed",
+        status.launched_count(),
+        status.failed_count()
+    );
+
+    unsafe { CoUninitialize() };
+    drop(mutex);
     std::process::ExitCode::SUCCESS
 }
 
-/// Load workspace by ID.
 fn load_workspace(
     base_dir: &str,
     workspace_id: &str,
     is_launch_and_edit: bool,
-) -> (Vec<data::Workspace>, Option<data::Workspace>) {
+) -> Option<Workspace> {
     if is_launch_and_edit {
         let temp_path = data::temp_workspaces_file(base_dir);
         if let Ok(workspaces) = workspaces_core::json_utils::read_workspaces_file(&temp_path) {
-            if let Some(ws) = workspaces.iter().find(|w| w.id == workspace_id).cloned() {
-                return (workspaces, Some(ws));
+            if let Some(ws) = workspaces.into_iter().find(|w| w.id == workspace_id) {
+                return Some(ws);
             }
         }
     }
-
     let main_path = data::workspaces_file(base_dir);
     if let Ok(workspaces) = workspaces_core::json_utils::read_workspaces_file(&main_path) {
-        let ws = workspaces.iter().find(|w| w.id == workspace_id).cloned();
-        return (workspaces, ws);
+        return workspaces.into_iter().find(|w| w.id == workspace_id);
     }
-
-    (Vec::new(), None)
+    None
 }
 
-/// Check if the current process is elevated.
-fn is_current_process_elevated() -> bool {
-    unsafe extern "system" {
-        fn GetCurrentProcess() -> windows_sys::Win32::Foundation::HANDLE;
-        fn OpenProcessToken(
-            process: windows_sys::Win32::Foundation::HANDLE,
-            desired_access: u32,
-            token: *mut windows_sys::Win32::Foundation::HANDLE,
-        ) -> i32;
-        fn GetTokenInformation(
-            token: windows_sys::Win32::Foundation::HANDLE,
-            info_class: u32,
-            info: *mut std::ffi::c_void,
-            info_len: u32,
-            return_len: *mut u32,
-        ) -> i32;
-    }
+fn shell_execute(path: &str, args: &str, elevated: bool) -> bool {
+    let parent_dir = std::path::Path::new(path)
+        .parent()
+        .map(|p| p.to_string_lossy().into_owned())
+        .unwrap_or_default();
 
-    #[repr(C)]
-    struct TokenElevation {
-        token_is_elevated: u32,
-    }
-
-    const TOKEN_QUERY: u32 = 0x0008;
-    const TOKEN_ELEVATION_CLASS: u32 = 20;
-
-    let handle = unsafe { GetCurrentProcess() };
-    let mut token: windows_sys::Win32::Foundation::HANDLE = std::ptr::null_mut();
-    let ok = unsafe { OpenProcessToken(handle, TOKEN_QUERY, &mut token) };
-    if ok == 0 {
-        return false;
-    }
-
-    let mut elevation = TokenElevation { token_is_elevated: 0 };
-    let mut ret_len: u32 = 0;
-    let ok = unsafe {
-        GetTokenInformation(
-            token,
-            TOKEN_ELEVATION_CLASS,
-            &mut elevation as *mut _ as *mut _,
-            std::mem::size_of::<TokenElevation>() as u32,
-            &mut ret_len,
-        )
-    };
-    unsafe { windows_sys::Win32::Foundation::CloseHandle(token); }
-
-    ok != 0 && elevation.token_is_elevated != 0
-}
-
-/// Restart the process as non-elevated.
-fn restart_non_elevated(args: &[String]) -> bool {
-    use windows_sys::Win32::UI::Shell::{
-        ShellExecuteExW, SEE_MASK_NOCLOSEPROCESS, SHELLEXECUTEINFOW,
-    };
-
-    let exe_path = match std::env::current_exe() {
-        Ok(p) => p.to_string_lossy().into_owned(),
-        Err(_) => return false,
-    };
-
-    let mut new_args: Vec<String> = args.iter().skip(1).cloned().collect();
-    new_args.push("restarted".to_string());
-    let args_str = new_args.join(" ");
-
-    let wide_verb = powertoys_win32::string::to_wide("open");
-    let wide_exe = powertoys_win32::string::to_wide(&exe_path);
-    let wide_args = powertoys_win32::string::to_wide(&args_str);
+    let verb = if elevated { "runas" } else { "open" };
+    let wide_verb = to_wide(verb);
+    let wide_file = to_wide(path);
+    let wide_args = to_wide(args);
+    let wide_dir = to_wide(&parent_dir);
 
     let mut sei: SHELLEXECUTEINFOW = unsafe { std::mem::zeroed() };
     sei.cbSize = std::mem::size_of::<SHELLEXECUTEINFOW>() as u32;
-    sei.fMask = SEE_MASK_NOCLOSEPROCESS;
+    sei.fMask = SEE_MASK_NOCLOSEPROCESS | SEE_MASK_NO_CONSOLE;
     sei.lpVerb = wide_verb.as_ptr();
-    sei.lpFile = wide_exe.as_ptr();
+    sei.lpFile = wide_file.as_ptr();
     sei.lpParameters = wide_args.as_ptr();
+    sei.lpDirectory = wide_dir.as_ptr();
     sei.nShow = 1; // SW_SHOWNORMAL
 
-    unsafe { ShellExecuteExW(&mut sei) != 0 }
+    let ok = unsafe { ShellExecuteExW(&mut sei) };
+    if ok != 0 {
+        if !sei.hProcess.is_null() {
+            unsafe { CloseHandle(sei.hProcess) };
+        }
+        true
+    } else {
+        let err = unsafe { GetLastError() };
+        eprintln!("ShellExecuteEx failed: error {err}");
+        false
+    }
 }
 
-/// Generate a GUID string.
+fn create_process(exe: &str, args: &str) -> bool {
+    let cmd_line = format!("\"{}\" {}", exe, args);
+    let mut wide_cmd: Vec<u16> = cmd_line.encode_utf16().chain(std::iter::once(0)).collect();
+
+    let mut si: STARTUPINFOW = unsafe { std::mem::zeroed() };
+    si.cb = std::mem::size_of::<STARTUPINFOW>() as u32;
+    let mut pi: PROCESS_INFORMATION = unsafe { std::mem::zeroed() };
+
+    let ok = unsafe {
+        CreateProcessW(
+            std::ptr::null(),
+            wide_cmd.as_mut_ptr(),
+            std::ptr::null(),
+            std::ptr::null(),
+            0,
+            0,
+            std::ptr::null(),
+            std::ptr::null(),
+            &si,
+            &mut pi,
+        )
+    };
+
+    if ok != 0 {
+        unsafe {
+            CloseHandle(pi.hThread);
+            CloseHandle(pi.hProcess);
+        }
+        true
+    } else {
+        let err = unsafe { GetLastError() };
+        eprintln!("CreateProcess failed: error {err}");
+        false
+    }
+}
+
 fn generate_guid() -> String {
     unsafe {
-        let mut guid = Guid {
-            data1: 0,
-            data2: 0,
-            data3: 0,
-            data4: [0; 8],
-        };
+        let mut guid = Guid { data1: 0, data2: 0, data3: 0, data4: [0; 8] };
         CoCreateGuid(&mut guid);
         format!(
             "{{{:08X}-{:04X}-{:04X}-{:02X}{:02X}-{:02X}{:02X}{:02X}{:02X}{:02X}{:02X}}}",
