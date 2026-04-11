@@ -67,6 +67,17 @@ impl PowerToyModule for Module {
     }
     fn set_config(&mut self, _config: *const u16) {}
     fn destroy(&mut self) { self.disable(); }
+
+    fn keep_track_of_pressed_win_key(&self) -> bool {
+        // ShortcutGuide activates on long Win key press
+        true
+    }
+
+    fn milliseconds_win_key_must_be_pressed(&self) -> u32 {
+        // Default: 900ms hold before showing the guide
+        900
+    }
+
     fn gpo_policy_enabled_configuration(&self) -> GpoRuleConfigured {
         check_gpo("EnableShortcutGuide")
     }

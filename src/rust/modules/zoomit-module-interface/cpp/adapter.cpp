@@ -34,6 +34,8 @@ struct RustModuleFunctionTable {
     size_t (*get_hotkeys)(void* ctx, PowertoyModuleIface::Hotkey* buffer, size_t buffer_size);
     bool (*on_hotkey)(void* ctx, size_t hotkeyId);
     bool (*is_enabled_by_default)(void* ctx);
+    bool (*keep_track_of_pressed_win_key)(void* ctx);
+    unsigned int (*milliseconds_win_key_must_be_pressed)(void* ctx);
     powertoys_gpo::gpo_rule_configured_t (*gpo_policy_enabled_configuration)(void* ctx);
 };
 
@@ -120,9 +122,16 @@ public:
     }
 
     bool is_enabled_by_default() const override {
-        // const_cast because Rust side takes *mut (for uniformity)
         auto* self = const_cast<RustModuleAdapter*>(this);
         return self->m_table->is_enabled_by_default(self->m_table->context);
+    }
+
+    bool keep_track_of_pressed_win_key() override {
+        return m_table->keep_track_of_pressed_win_key(m_table->context);
+    }
+
+    unsigned int milliseconds_win_key_must_be_pressed() override {
+        return m_table->milliseconds_win_key_must_be_pressed(m_table->context);
     }
 
     powertoys_gpo::gpo_rule_configured_t gpo_policy_enabled_configuration() override {

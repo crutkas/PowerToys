@@ -6,6 +6,7 @@ on:
     paths: ['src/rust/**']
   pull_request:
     paths: ['src/rust/**']
+  workflow_dispatch:
 
 env:
   CARGO_TERM_COLOR: always

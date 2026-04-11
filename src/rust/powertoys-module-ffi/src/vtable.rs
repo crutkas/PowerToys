@@ -55,6 +55,16 @@ pub trait PowerToyModule: Send {
         true
     }
 
+    /// Whether this module tracks Win key press (for ShortcutGuide-style activation).
+    fn keep_track_of_pressed_win_key(&self) -> bool {
+        false
+    }
+
+    /// Milliseconds the Win key must be held before triggering. 0 = don't track.
+    fn milliseconds_win_key_must_be_pressed(&self) -> u32 {
+        0
+    }
+
     /// Check GPO policy for this module.
     fn gpo_policy_enabled_configuration(&self) -> GpoRuleConfigured {
         GpoRuleConfigured::NotConfigured
@@ -140,6 +150,14 @@ pub unsafe extern "C" fn ffi_is_enabled_by_default(ctx: *mut std::ffi::c_void) -
     unsafe { as_module(ctx).is_enabled_by_default() }
 }
 
+pub unsafe extern "C" fn ffi_keep_track_of_pressed_win_key(ctx: *mut std::ffi::c_void) -> bool {
+    unsafe { as_module(ctx).keep_track_of_pressed_win_key() }
+}
+
+pub unsafe extern "C" fn ffi_milliseconds_win_key_must_be_pressed(ctx: *mut std::ffi::c_void) -> u32 {
+    unsafe { as_module(ctx).milliseconds_win_key_must_be_pressed() }
+}
+
 /// Build a `ModuleFunctionTable` from a boxed module.
 /// The returned table owns the module via the context pointer.
 pub fn build_function_table(module: Box<dyn PowerToyModule>) -> ModuleFunctionTable {
@@ -160,6 +178,8 @@ pub fn build_function_table(module: Box<dyn PowerToyModule>) -> ModuleFunctionTa
         get_hotkeys: ffi_get_hotkeys,
         on_hotkey: ffi_on_hotkey,
         is_enabled_by_default: ffi_is_enabled_by_default,
+        keep_track_of_pressed_win_key: ffi_keep_track_of_pressed_win_key,
+        milliseconds_win_key_must_be_pressed: ffi_milliseconds_win_key_must_be_pressed,
         gpo_policy_enabled_configuration: ffi_gpo_policy,
     }
 }
