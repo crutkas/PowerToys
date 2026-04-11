@@ -78,6 +78,13 @@ impl DragState {
         let rect = wa.get_zone_rect(&self.highlighted_zones);
         Some((self.hwnd, rect))
     }
+
+    pub fn snap_target_info(&self, work_areas: &[WorkArea]) -> Option<(usize, usize)> {
+        let wa_idx = self.active_work_area?;
+        let _wa = work_areas.get(wa_idx)?;
+        let first_zone = *self.highlighted_zones.first()? as usize;
+        Some((wa_idx, first_zone))
+    }
 }
 
 #[cfg(test)]

@@ -113,7 +113,14 @@ impl FancyZonesEngine {
     /// End drag and return the snap target rect if any.
     pub fn on_move_size_end(&mut self) -> Option<Rect> {
         let drag = self.active_drag.take()?;
-        let (_, rect) = drag.snap_target(&self.work_areas)?;
+        let (wa_idx, zone_idx) = drag.snap_target_info(&self.work_areas)?;
+        let rect = self.work_areas.get(wa_idx)?.get_zone_rect(&vec![zone_idx as i64]);
+
+        // Record which zone this window is in so keyboard snap knows
+        if let Some(wa) = self.work_areas.get_mut(wa_idx) {
+            wa.assign_window(drag.hwnd, vec![zone_idx as i64]);
+        }
+
         Some(rect)
     }
 
