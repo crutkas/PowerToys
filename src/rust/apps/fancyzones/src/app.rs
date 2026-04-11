@@ -12,7 +12,7 @@ use windows_sys::Win32::Foundation::{HWND, POINT, SIZE};
 use windows_sys::Win32::Graphics::Gdi::*;
 use windows_sys::Win32::UI::WindowsAndMessaging::*;
 
-use crate::hooks::{self, WinEventHookGuard};
+use crate::hooks::{self, WinEventHookGuard, KeyboardHookGuard, WM_FZ_SNAP_HOTKEY};
 
 /// Custom window messages posted by the WinEvent callback.
 pub const WM_FZ_MOVESIZE_START: u32 = WM_APP + 1;
@@ -20,11 +20,9 @@ pub const WM_FZ_MOVESIZE_END: u32 = WM_APP + 2;
 
 /// Timer ID for mouse-position polling during drag.
 const DRAG_TIMER_ID: usize = 1;
-/// ~60 fps polling interval.
 const DRAG_TIMER_MS: u32 = 16;
 
 thread_local! {
-    /// Thread-local back-pointer so the static WinEvent callback can reach our app.
     pub static APP_PTR: RefCell<*mut FancyZonesApp> = const { RefCell::new(ptr::null_mut()) };
 }
 
@@ -32,6 +30,7 @@ pub struct FancyZonesApp {
     engine: FancyZonesEngine,
     overlays: Vec<ZoneOverlay>,
     move_size_hooks: Vec<WinEventHookGuard>,
+    keyboard_hook: Option<KeyboardHookGuard>,
     dragged_hwnd: HWND,
     msg_hwnd: HWND,
 }
@@ -60,6 +59,7 @@ impl FancyZonesApp {
             engine,
             overlays: Vec::new(),
             move_size_hooks: Vec::new(),
+            keyboard_hook: None,
             dragged_hwnd: ptr::null_mut(),
             msg_hwnd: ptr::null_mut(),
         }
@@ -71,9 +71,15 @@ impl FancyZonesApp {
         APP_PTR.with(|p| *p.borrow_mut() = self as *mut _);
 
         self.move_size_hooks = hooks::install_move_size_hooks();
+        self.keyboard_hook = hooks::install_keyboard_hook(
+            self.engine.settings().override_snap_hotkeys
+        );
 
         let _ = std::fs::write(r"C:\Users\crutkas\AppData\Local\Temp\fz_rust_hooks.txt",
-            format!("Hooks installed: {}, entering message loop", self.move_size_hooks.len()));
+            format!("Hooks: winevent={}, keyboard={}, override_snap={}",
+                self.move_size_hooks.len(),
+                self.keyboard_hook.is_some(),
+                self.engine.settings().override_snap_hotkeys));
 
         // Standard Win32 message loop.
         unsafe {
@@ -82,6 +88,7 @@ impl FancyZonesApp {
                 match msg.message {
                     WM_FZ_MOVESIZE_START => self.on_move_size_start(msg.wParam as HWND),
                     WM_FZ_MOVESIZE_END => self.on_move_size_end(),
+                    WM_FZ_SNAP_HOTKEY => self.on_snap_hotkey(msg.lParam as u32),
                     WM_TIMER if msg.wParam == DRAG_TIMER_ID => self.on_drag_timer(),
                     _ => {
                         TranslateMessage(&msg);
@@ -95,6 +102,7 @@ impl FancyZonesApp {
     pub fn shutdown(&mut self) {
         self.hide_overlays();
         self.move_size_hooks.clear();
+        self.keyboard_hook = None;
         self.engine.shutdown();
         APP_PTR.with(|p| *p.borrow_mut() = ptr::null_mut());
 
@@ -132,6 +140,15 @@ impl FancyZonesApp {
         if let Some((x, y)) = win32::get_cursor_pos() {
             self.engine.on_mouse_move(x, y);
             self.update_overlay_highlight();
+        }
+    }
+
+    fn on_snap_hotkey(&mut self, vk_code: u32) {
+        // Win+Arrow intercepted by keyboard hook
+        let fg = unsafe { GetForegroundWindow() };
+        if fg.is_null() { return; }
+        if let Some(snap_rect) = self.engine.on_snap_hotkey(fg, vk_code) {
+            win32::snap_window_to_rect(fg, &snap_rect);
         }
     }
 

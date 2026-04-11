@@ -1,13 +1,24 @@
-//! WinEvent hooks for drag detection (EVENT_SYSTEM_MOVESIZESTART / END).
+//! WinEvent hooks for drag detection + low-level keyboard hook for Win+Arrow.
 
 use std::ptr;
+use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 
-use windows_sys::Win32::Foundation::HWND;
+use windows_sys::Win32::Foundation::*;
+use windows_sys::Win32::System::LibraryLoader::GetModuleHandleW;
 use windows_sys::Win32::System::Threading::GetCurrentThreadId;
 use windows_sys::Win32::UI::Accessibility::{SetWinEventHook, UnhookWinEvent};
-use windows_sys::Win32::UI::WindowsAndMessaging::{PostThreadMessageW, EVENT_SYSTEM_MOVESIZESTART, EVENT_SYSTEM_MOVESIZEEND};
+use windows_sys::Win32::UI::Input::KeyboardAndMouse::*;
+use windows_sys::Win32::UI::WindowsAndMessaging::*;
 
 use crate::app::{WM_FZ_MOVESIZE_START, WM_FZ_MOVESIZE_END};
+
+/// Custom message for keyboard snap (Win+Arrow intercepted).
+pub const WM_FZ_SNAP_HOTKEY: u32 = WM_APP + 3;
+
+/// Whether to override Windows snap (set from settings).
+static OVERRIDE_SNAP: AtomicBool = AtomicBool::new(false);
+/// Thread ID to post messages to.
+static MAIN_THREAD_ID: AtomicU32 = AtomicU32::new(0);
 
 /// RAII guard that unhooks a WinEvent hook on drop.
 pub struct WinEventHookGuard {
@@ -85,4 +96,72 @@ unsafe extern "system" fn win_event_proc(
     unsafe {
         PostThreadMessageW(GetCurrentThreadId(), msg, hwnd as usize, 0);
     }
+}
+
+// ---- Low-level keyboard hook for Win+Arrow (override Windows snap) ----
+
+/// RAII guard for the keyboard hook.
+pub struct KeyboardHookGuard {
+    handle: *mut core::ffi::c_void,
+}
+unsafe impl Send for KeyboardHookGuard {}
+impl Drop for KeyboardHookGuard {
+    fn drop(&mut self) {
+        if !self.handle.is_null() {
+            unsafe { UnhookWindowsHookEx(self.handle); }
+        }
+    }
+}
+
+/// Install a low-level keyboard hook to intercept Win+Arrow.
+pub fn install_keyboard_hook(override_snap: bool) -> Option<KeyboardHookGuard> {
+    OVERRIDE_SNAP.store(override_snap, Ordering::SeqCst);
+    MAIN_THREAD_ID.store(unsafe { GetCurrentThreadId() }, Ordering::SeqCst);
+
+    let handle = unsafe {
+        SetWindowsHookExW(
+            WH_KEYBOARD_LL,
+            Some(low_level_keyboard_proc),
+            GetModuleHandleW(ptr::null()),
+            0,
+        )
+    };
+    if handle.is_null() { None }
+    else { Some(KeyboardHookGuard { handle }) }
+}
+
+/// Update the override_snap setting at runtime.
+pub fn set_override_snap(val: bool) {
+    OVERRIDE_SNAP.store(val, Ordering::SeqCst);
+}
+
+unsafe extern "system" fn low_level_keyboard_proc(
+    code: i32,
+    wparam: WPARAM,
+    lparam: LPARAM,
+) -> LRESULT {
+    if code >= 0 && OVERRIDE_SNAP.load(Ordering::SeqCst) {
+        let info = unsafe { &*(lparam as *const KBDLLHOOKSTRUCT) };
+        let vk = info.vkCode;
+
+        // Check if Win key is held
+        let win_held = unsafe {
+            (GetAsyncKeyState(VK_LWIN as i32) as u16 & 0x8000) != 0 ||
+            (GetAsyncKeyState(VK_RWIN as i32) as u16 & 0x8000) != 0
+        };
+
+        if win_held {
+            let is_arrow = matches!(vk, 0x25 | 0x26 | 0x27 | 0x28); // VK_LEFT, UP, RIGHT, DOWN
+            if is_arrow && (wparam == WM_KEYDOWN as usize || wparam == WM_SYSKEYDOWN as usize) {
+                // Post to our message loop and EAT the key
+                let tid = MAIN_THREAD_ID.load(Ordering::SeqCst);
+                unsafe {
+                    PostThreadMessageW(tid, WM_FZ_SNAP_HOTKEY, 0, vk as isize);
+                }
+                return 1; // Swallow the key — prevents Windows snap
+            }
+        }
+    }
+
+    unsafe { CallNextHookEx(ptr::null_mut(), code, wparam, lparam) }
 }
