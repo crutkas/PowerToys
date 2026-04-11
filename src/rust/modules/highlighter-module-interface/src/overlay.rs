@@ -2,7 +2,7 @@
 //!
 //! Spawns a dedicated thread that owns:
 //! - A transparent layered popup covering the virtual screen
-//! - An ID2D1HwndRenderTarget for GPU-accelerated ellipse rendering
+//! - An ID2D1DCRenderTarget rendering to a 32-bit DIB for per-pixel alpha
 //! - A low-level mouse hook forwarding events via PostMessage
 //! - A 16 ms timer driving the render loop (~60 FPS)
 
@@ -18,6 +18,7 @@ use windows::Win32::Graphics::Direct2D::*;
 use windows::Win32::Graphics::Dxgi::Common::*;
 
 use windows_sys::Win32::Foundation::*;
+use windows_sys::Win32::Graphics::Gdi::*;
 use windows_sys::Win32::System::LibraryLoader::GetModuleHandleW;
 use windows_sys::Win32::UI::WindowsAndMessaging::*;
 
@@ -85,10 +86,12 @@ impl OverlayHandle {
 
 struct OverlayData {
     manager: HighlightManager,
-    render_target: Option<ID2D1HwndRenderTarget>,
+    render_target: Option<ID2D1DCRenderTarget>,
     hook: HHOOK,
     vx: i32,
     vy: i32,
+    vw: i32,
+    vh: i32,
 }
 
 // ── Thread entry ───────────────────────────────────────────────────────────
@@ -124,17 +127,16 @@ fn overlay_thread(settings: Settings) {
         );
         if hwnd.is_null() { return; }
 
-        SetLayeredWindowAttributes(hwnd, 0, 255, LWA_ALPHA);
+        // Per-pixel alpha via UpdateLayeredWindow — do NOT call SetLayeredWindowAttributes
 
-        let rt = create_render_target(hwnd, vw, vh);
+        let rt = create_dc_render_target();
         let hook = SetWindowsHookExW(WH_MOUSE_LL, Some(mouse_hook_proc), hinst, 0);
 
         let data = Box::new(OverlayData {
             manager: HighlightManager::new(settings),
             render_target: rt,
             hook,
-            vx,
-            vy,
+            vx, vy, vw, vh,
         });
         SetWindowLongPtrW(hwnd, GWLP_USERDATA, Box::into_raw(data) as isize);
 
@@ -154,12 +156,12 @@ fn overlay_thread(settings: Settings) {
 
 // ── D2D helpers ────────────────────────────────────────────────────────────
 
-fn create_render_target(hwnd: HWND, w: i32, h: i32) -> Option<ID2D1HwndRenderTarget> {
+fn create_dc_render_target() -> Option<ID2D1DCRenderTarget> {
     let factory = get_d2d_factory()?;
     let rt_props = D2D1_RENDER_TARGET_PROPERTIES {
         r#type: D2D1_RENDER_TARGET_TYPE_DEFAULT,
         pixelFormat: D2D1_PIXEL_FORMAT {
-            format: DXGI_FORMAT_UNKNOWN,
+            format: DXGI_FORMAT_B8G8R8A8_UNORM,
             alphaMode: D2D1_ALPHA_MODE_PREMULTIPLIED,
         },
         dpiX: 96.0,
@@ -167,19 +169,11 @@ fn create_render_target(hwnd: HWND, w: i32, h: i32) -> Option<ID2D1HwndRenderTar
         usage: D2D1_RENDER_TARGET_USAGE_NONE,
         minLevel: D2D1_FEATURE_LEVEL_DEFAULT,
     };
-    let hwnd_props = D2D1_HWND_RENDER_TARGET_PROPERTIES {
-        hwnd: windows::Win32::Foundation::HWND(hwnd as *mut _),
-        pixelSize: D2D_SIZE_U { width: w as u32, height: h as u32 },
-        presentOptions: D2D1_PRESENT_OPTIONS_NONE,
-    };
-    unsafe {
-        let rt = factory.CreateHwndRenderTarget(&rt_props, &hwnd_props).ok()?;
-        rt.SetAntialiasMode(D2D1_ANTIALIAS_MODE_PER_PRIMITIVE);
-        Some(rt)
-    }
+    unsafe { factory.CreateDCRenderTarget(&rt_props).ok() }
 }
 
-fn render(data: &OverlayData) {
+/// Render highlights onto a memory DC, then call UpdateLayeredWindow for per-pixel alpha.
+fn render(hwnd: HWND, data: &OverlayData) {
     let rt = match &data.render_target {
         Some(rt) => rt,
         None => return,
@@ -188,23 +182,62 @@ fn render(data: &OverlayData) {
     let now = now_ms();
     let highlights = data.manager.get_visible_highlights(now);
     let radius = data.manager.settings().radius as f32;
+    let w = data.vw;
+    let h = data.vh;
 
     unsafe {
+        // Create memory DC backed by a 32-bit ARGB DIB section
+        let screen_dc = GetDC(std::ptr::null_mut());
+        let mem_dc = CreateCompatibleDC(screen_dc);
+
+        let mut bmi: BITMAPINFO = std::mem::zeroed();
+        bmi.bmiHeader.biSize = std::mem::size_of::<BITMAPINFOHEADER>() as u32;
+        bmi.bmiHeader.biWidth = w;
+        bmi.bmiHeader.biHeight = -h; // top-down
+        bmi.bmiHeader.biPlanes = 1;
+        bmi.bmiHeader.biBitCount = 32;
+        bmi.bmiHeader.biCompression = BI_RGB;
+
+        let mut bits: *mut std::ffi::c_void = std::ptr::null_mut();
+        let dib = CreateDIBSection(
+            mem_dc, &bmi, DIB_RGB_COLORS, &mut bits,
+            std::ptr::null_mut(), 0,
+        );
+        if dib.is_null() {
+            DeleteDC(mem_dc);
+            ReleaseDC(std::ptr::null_mut(), screen_dc);
+            return;
+        }
+        let old_bmp = SelectObject(mem_dc, dib as _);
+
+        // Bind D2D DC render target to the memory DC
+        let bind_rect = windows::Win32::Foundation::RECT {
+            left: 0, top: 0, right: w, bottom: h,
+        };
+        let hdc = windows::Win32::Graphics::Gdi::HDC(mem_dc as *mut _);
+        if rt.BindDC(hdc, &bind_rect).is_err() {
+            SelectObject(mem_dc, old_bmp);
+            DeleteObject(dib as _);
+            DeleteDC(mem_dc);
+            ReleaseDC(std::ptr::null_mut(), screen_dc);
+            return;
+        }
+
         rt.BeginDraw();
         rt.Clear(Some(&D2D1_COLOR_F { r: 0.0, g: 0.0, b: 0.0, a: 0.0 }));
 
-        for h in &highlights {
+        for hl in &highlights {
             let color = D2D1_COLOR_F {
-                r: h.color.r as f32 / 255.0,
-                g: h.color.g as f32 / 255.0,
-                b: h.color.b as f32 / 255.0,
-                a: (h.color.a as f32 / 255.0) * h.opacity as f32,
+                r: hl.color.r as f32 / 255.0,
+                g: hl.color.g as f32 / 255.0,
+                b: hl.color.b as f32 / 255.0,
+                a: (hl.color.a as f32 / 255.0) * hl.opacity as f32,
             };
             if let Ok(brush) = rt.CreateSolidColorBrush(&color, None) {
                 let ellipse = D2D1_ELLIPSE {
                     point: D2D_POINT_2F {
-                        x: h.x as f32 - data.vx as f32,
-                        y: h.y as f32 - data.vy as f32,
+                        x: hl.x as f32 - data.vx as f32,
+                        y: hl.y as f32 - data.vy as f32,
                     },
                     radiusX: radius,
                     radiusY: radius,
@@ -214,6 +247,27 @@ fn render(data: &OverlayData) {
         }
 
         let _ = rt.EndDraw(None, None);
+
+        // Update the layered window with per-pixel alpha from the DIB
+        let pt_src = POINT { x: 0, y: 0 };
+        let pt_dst = POINT { x: data.vx, y: data.vy };
+        let size = SIZE { cx: w, cy: h };
+        let blend = BLENDFUNCTION {
+            BlendOp: AC_SRC_OVER as u8,
+            BlendFlags: 0,
+            SourceConstantAlpha: 255,
+            AlphaFormat: AC_SRC_ALPHA as u8,
+        };
+        UpdateLayeredWindow(
+            hwnd, screen_dc, &pt_dst, &size,
+            mem_dc, &pt_src, 0, &blend, ULW_ALPHA,
+        );
+
+        // Cleanup GDI objects
+        SelectObject(mem_dc, old_bmp);
+        DeleteObject(dib as _);
+        DeleteDC(mem_dc);
+        ReleaseDC(std::ptr::null_mut(), screen_dc);
     }
 }
 
@@ -244,7 +298,7 @@ unsafe extern "system" fn wnd_proc(
         match msg {
             WM_TIMER if wp == TIMER_ID => {
                 data.manager.cleanup(now_ms());
-                render(data);
+                render(hwnd, data);
                 0
             }
             WM_HL_LDOWN => {
