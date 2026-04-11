@@ -1,16 +1,19 @@
 [package]
-name = "findmymouse-module"
+name = "highlighter-module-interface"
 version = "0.1.0"
 edition = "2024"
-description = "FindMyMouse module interface for PowerToys - Rust implementation"
+description = "Mouse Highlighter module interface for PowerToys — Rust implementation"
+build = "build.rs"
 
+# Standalone workspace so `cargo build` works without modifying the root Cargo.toml.
+# When this crate is added to the root workspace members, remove this line.
 
 [lib]
 crate-type = ["cdylib", "staticlib"]
 
 [dependencies]
 powertoys-module-ffi = { path = "../../powertoys-module-ffi" }
-findmymouse-core = { path = "../../libs/findmymouse-core" }
+highlighter-core = { path = "../../libs/highlighter-core" }
 windows-sys = { version = "0.59", features = [
     "Win32_Foundation",
     "Win32_System_LibraryLoader",
@@ -23,5 +26,8 @@ windows-sys = { version = "0.59", features = [
 ] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+
+[build-dependencies]
+cc = "1"
 
 [dev-dependencies]

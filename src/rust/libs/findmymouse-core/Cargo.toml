@@ -4,7 +4,6 @@ version = "0.1.0"
 edition = "2024"
 description = "FindMyMouse core logic — double-ctrl detection, shake detection, settings (no Win32)"
 
-[workspace]
 
 [dependencies]
 serde = { version = "1", features = ["derive"] }
