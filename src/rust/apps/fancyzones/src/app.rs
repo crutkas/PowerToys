@@ -6,8 +6,10 @@ use std::ptr;
 use fancyzones_engine::engine::FancyZonesEngine;
 use fancyzones_engine::overlay::{OverlayColors, ZoneOverlay};
 use fancyzones_engine::snap::win32;
+use fancyzones_engine::work_area::WorkArea;
 
-use windows_sys::Win32::Foundation::HWND;
+use windows_sys::Win32::Foundation::{HWND, POINT, SIZE};
+use windows_sys::Win32::Graphics::Gdi::*;
 use windows_sys::Win32::UI::WindowsAndMessaging::*;
 
 use crate::hooks::{self, WinEventHookGuard};
@@ -39,6 +41,21 @@ impl FancyZonesApp {
         let mut engine = FancyZonesEngine::init();
         engine.update_work_areas();
 
+        // Debug: log work area count
+        let dbg = format!(
+            "FZ Rust init: {} work areas, shift_drag={}\nMonitors: {}\n",
+            engine.work_areas().len(),
+            engine.settings().shift_drag,
+            powertoys_win32::monitor::enum_monitors().len(),
+        );
+        for (i, wa) in engine.work_areas().iter().enumerate() {
+            let _ = std::fs::write(
+                format!(r"C:\Users\crutkas\AppData\Local\Temp\fz_rust_wa_{}.txt", i),
+                format!("WorkArea {}: zones={}, rect={:?}", i, wa.zone_count(), wa.work_area_rect()),
+            );
+        }
+        let _ = std::fs::write(r"C:\Users\crutkas\AppData\Local\Temp\fz_rust_debug.txt", &dbg);
+
         Self {
             engine,
             overlays: Vec::new(),
@@ -54,6 +71,9 @@ impl FancyZonesApp {
         APP_PTR.with(|p| *p.borrow_mut() = self as *mut _);
 
         self.move_size_hooks = hooks::install_move_size_hooks();
+
+        let _ = std::fs::write(r"C:\Users\crutkas\AppData\Local\Temp\fz_rust_hooks.txt",
+            format!("Hooks installed: {}, entering message loop", self.move_size_hooks.len()));
 
         // Standard Win32 message loop.
         unsafe {
@@ -87,6 +107,9 @@ impl FancyZonesApp {
     // ---- Drag lifecycle --------------------------------------------------
 
     fn on_move_size_start(&mut self, hwnd: HWND) {
+        let _ = std::fs::write(r"C:\Users\crutkas\AppData\Local\Temp\fz_rust_drag.txt",
+            format!("DRAG START hwnd={:?} is_null={} work_areas={} is_dragging_before={}",
+                hwnd, hwnd.is_null(), self.engine.work_areas().len(), self.engine.is_dragging()));
         if hwnd.is_null() {
             return;
         }
@@ -108,6 +131,7 @@ impl FancyZonesApp {
         }
         if let Some((x, y)) = win32::get_cursor_pos() {
             self.engine.on_mouse_move(x, y);
+            self.update_overlay_highlight();
         }
     }
 
@@ -138,14 +162,44 @@ impl FancyZonesApp {
             &self.engine.settings().zone_highlight_color,
             self.engine.settings().zone_highlight_opacity,
         );
-        let _ = &colors; // used implicitly by create_zone_pixel_buffer if we paint later
 
         for wa in self.engine.work_areas() {
-            let r = wa.work_area_rect();
-            if let Some(overlay) = ZoneOverlay::create(r.left, r.top, r.width(), r.height()) {
+            let wa_rect = wa.work_area_rect();
+            let w = wa_rect.width();
+            let h = wa_rect.height();
+            if w <= 0 || h <= 0 { continue; }
+
+            if let Some(overlay) = ZoneOverlay::create(wa_rect.left, wa_rect.top, w, h) {
+                // Render all zones onto a single ARGB bitmap
+                render_zones_to_overlay(&overlay, w, h, wa, &colors, None);
                 overlay.show();
                 self.overlays.push(overlay);
             }
+        }
+    }
+
+    fn update_overlay_highlight(&mut self) {
+        if self.overlays.is_empty() { return; }
+
+        let colors = OverlayColors::from_hex(
+            &self.engine.settings().zone_color,
+            &self.engine.settings().zone_border_color,
+            &self.engine.settings().zone_highlight_color,
+            self.engine.settings().zone_highlight_opacity,
+        );
+
+        // Find which work area and zones are highlighted
+        let active_info = self.engine.active_zone_info()
+            .map(|(wi, zones)| (wi, zones.first().copied()));
+
+        for (i, wa) in self.engine.work_areas().iter().enumerate() {
+            if i >= self.overlays.len() { break; }
+            let wa_rect = wa.work_area_rect();
+            let highlight_zone = match active_info {
+                Some((wi, zone_idx)) if wi == i => zone_idx.map(|z| z as usize),
+                _ => None,
+            };
+            render_zones_to_overlay(&self.overlays[i], wa_rect.width(), wa_rect.height(), wa, &colors, highlight_zone);
         }
     }
 
@@ -154,6 +208,119 @@ impl FancyZonesApp {
             overlay.hide();
         }
         self.overlays.clear();
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Render zone rectangles onto an overlay via UpdateLayeredWindow.
+// ---------------------------------------------------------------------------
+
+fn render_zones_to_overlay(
+    overlay: &ZoneOverlay,
+    width: i32,
+    height: i32,
+    wa: &WorkArea,
+    colors: &OverlayColors,
+    highlight_zone: Option<usize>,
+) {
+    if width <= 0 || height <= 0 { return; }
+    let w = width as u32;
+    let h = height as u32;
+
+    unsafe {
+        let hwnd = overlay.hwnd();
+        let hdc_screen = GetDC(ptr::null_mut());
+        let mem_dc = CreateCompatibleDC(hdc_screen);
+
+        let mut bmi: BITMAPINFO = std::mem::zeroed();
+        bmi.bmiHeader.biSize = std::mem::size_of::<BITMAPINFOHEADER>() as u32;
+        bmi.bmiHeader.biWidth = w as i32;
+        bmi.bmiHeader.biHeight = -(h as i32); // top-down
+        bmi.bmiHeader.biPlanes = 1;
+        bmi.bmiHeader.biBitCount = 32;
+        bmi.bmiHeader.biCompression = BI_RGB;
+
+        let mut bits: *mut u8 = ptr::null_mut();
+        let bmp = CreateDIBSection(mem_dc, &bmi, DIB_RGB_COLORS, &mut bits as *mut _ as *mut _, ptr::null_mut(), 0);
+        if bmp.is_null() || bits.is_null() {
+            DeleteDC(mem_dc);
+            ReleaseDC(ptr::null_mut(), hdc_screen);
+            return;
+        }
+        let old_bmp = SelectObject(mem_dc, bmp);
+
+        let buf = std::slice::from_raw_parts_mut(bits, (w * h * 4) as usize);
+        buf.fill(0); // transparent
+
+        let wa_rect = wa.work_area_rect();
+
+        for (i, zone_rect) in wa.zone_rects_screen().iter().enumerate() {
+            let is_highlight = highlight_zone == Some(i);
+            let (r, g, b) = if is_highlight { colors.highlight_color } else { colors.zone_color };
+            let a = if is_highlight { colors.opacity } else { colors.opacity / 3 };
+
+            // Premultiply alpha
+            let pr = (r as u16 * a as u16 / 255) as u8;
+            let pg = (g as u16 * a as u16 / 255) as u8;
+            let pb = (b as u16 * a as u16 / 255) as u8;
+
+            // Zone rect relative to work area origin
+            let zl = (zone_rect.left - wa_rect.left).max(0) as u32;
+            let zt = (zone_rect.top - wa_rect.top).max(0) as u32;
+            let zr = (zone_rect.right - wa_rect.left).min(width).max(0) as u32;
+            let zb = (zone_rect.bottom - wa_rect.top).min(height).max(0) as u32;
+
+            // Fill zone
+            for y in zt..zb {
+                for x in zl..zr {
+                    let off = ((y * w + x) * 4) as usize;
+                    if off + 3 < buf.len() {
+                        buf[off] = pb;
+                        buf[off + 1] = pg;
+                        buf[off + 2] = pr;
+                        buf[off + 3] = a;
+                    }
+                }
+            }
+
+            // Border (2px, full opacity)
+            let (br, bg, bb) = colors.border_color;
+            let ba = colors.opacity;
+            let bpr = (br as u16 * ba as u16 / 255) as u8;
+            let bpg = (bg as u16 * ba as u16 / 255) as u8;
+            let bpb = (bb as u16 * ba as u16 / 255) as u8;
+            for t in 0..2u32 {
+                for x in zl..zr {
+                    for &ey in &[zt + t, zb.saturating_sub(1 + t)] {
+                        let off = ((ey * w + x) * 4) as usize;
+                        if off + 3 < buf.len() { buf[off]=bpb; buf[off+1]=bpg; buf[off+2]=bpr; buf[off+3]=ba; }
+                    }
+                }
+                for y in zt..zb {
+                    for &ex in &[zl + t, zr.saturating_sub(1 + t)] {
+                        let off = ((y * w + ex) * 4) as usize;
+                        if off + 3 < buf.len() { buf[off]=bpb; buf[off+1]=bpg; buf[off+2]=bpr; buf[off+3]=ba; }
+                    }
+                }
+            }
+        }
+
+        // UpdateLayeredWindow
+        let mut pt_src = POINT { x: 0, y: 0 };
+        let mut pt_dst = POINT { x: wa_rect.left, y: wa_rect.top };
+        let mut sz = SIZE { cx: width, cy: height };
+        let mut blend = BLENDFUNCTION {
+            BlendOp: 0,    // AC_SRC_OVER
+            BlendFlags: 0,
+            SourceConstantAlpha: 255,
+            AlphaFormat: 1, // AC_SRC_ALPHA
+        };
+        UpdateLayeredWindow(hwnd, hdc_screen, &mut pt_dst, &mut sz, mem_dc, &mut pt_src, 0, &mut blend, 2); // ULW_ALPHA
+
+        SelectObject(mem_dc, old_bmp);
+        DeleteObject(bmp);
+        DeleteDC(mem_dc);
+        ReleaseDC(ptr::null_mut(), hdc_screen);
     }
 }
 

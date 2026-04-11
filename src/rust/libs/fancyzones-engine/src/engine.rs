@@ -160,6 +160,13 @@ impl FancyZonesEngine {
         self.active_drag.is_some()
     }
 
+    /// Get the active work area index and highlighted zone indices during drag.
+    pub fn active_zone_info(&self) -> Option<(usize, &ZoneIndexSet)> {
+        let drag = self.active_drag.as_ref()?;
+        let wa_idx = drag.active_work_area?;
+        Some((wa_idx, &drag.highlighted_zones))
+    }
+
     /// Shut down and clean up.
     pub fn shutdown(&mut self) {
         self.active_drag = None;

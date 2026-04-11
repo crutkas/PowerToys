@@ -13,6 +13,14 @@ use windows_sys::Win32::UI::WindowsAndMessaging::WM_QUIT;
 fn main() {
     unsafe { SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2); }
 
+    // COM initialization needed for WinEvent hooks  
+    unsafe {
+        windows_sys::Win32::System::Com::CoInitializeEx(
+            core::ptr::null(),
+            windows_sys::Win32::System::Com::COINIT_APARTMENTTHREADED as u32,
+        );
+    }
+
     // Singleton mutex — exit if another instance is already running.
     let _mutex = match AppMutex::create("Local\\PowerToys_FancyZones_InstanceMutex") {
         Some(m) if !m.already_running() => m,

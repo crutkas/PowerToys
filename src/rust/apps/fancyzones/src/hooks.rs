@@ -37,7 +37,7 @@ pub fn install_move_size_hooks() -> Vec<WinEventHookGuard> {
             Some(win_event_proc),
             0, // all processes
             0, // all threads
-            0, // WINEVENT_OUTOFCONTEXT (default)
+            0x0002, // WINEVENT_OUTOFCONTEXT | WINEVENT_SKIPOWNPROCESS
         )
     };
     if !h1.is_null() {
@@ -52,7 +52,7 @@ pub fn install_move_size_hooks() -> Vec<WinEventHookGuard> {
             Some(win_event_proc),
             0,
             0,
-            0,
+            0x0002, // WINEVENT_OUTOFCONTEXT | WINEVENT_SKIPOWNPROCESS
         )
     };
     if !h2.is_null() {
@@ -73,6 +73,9 @@ unsafe extern "system" fn win_event_proc(
     _event_thread: u32,
     _event_time: u32,
 ) {
+    let _ = std::fs::write(r"C:\Users\crutkas\AppData\Local\Temp\fz_rust_winevent.txt",
+        format!("WinEvent: event={} hwnd={:?}", event, hwnd));
+
     let msg = match event {
         EVENT_SYSTEM_MOVESIZESTART => WM_FZ_MOVESIZE_START,
         EVENT_SYSTEM_MOVESIZEEND => WM_FZ_MOVESIZE_END,
