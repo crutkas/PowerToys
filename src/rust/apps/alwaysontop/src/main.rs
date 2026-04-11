@@ -8,6 +8,7 @@
 mod app;
 mod border;
 mod settings;
+mod virtual_desktop;
 
 use std::sync::Mutex;
 use powertoys_win32::string::to_wide;
@@ -69,6 +70,14 @@ fn main() {
     // Reset the terminate event in case it was left signaled from a previous run
     app::reset_terminate_event(&aot);
 
+    // File watcher: monitor settings.json for changes
+    {
+        let tid = *MAIN_THREAD_ID.lock().unwrap();
+        std::thread::spawn(move || {
+            watch_settings_file(tid);
+        });
+    }
+
     // Message loop
     unsafe {
         let mut msg: MSG = std::mem::zeroed();
@@ -80,5 +89,33 @@ fn main() {
             DispatchMessageW(&msg);
         }
         aot.cleanup();
+    }
+}
+
+/// Watch the AlwaysOnTop settings directory for file changes.
+/// Posts WM_PRIV_SETTINGS_CHANGED to the main thread when settings.json changes.
+fn watch_settings_file(main_thread_id: u32) {
+    let dir = match powertoys_win32::settings::module_dir("AlwaysOnTop") {
+        Some(d) => d,
+        None => return,
+    };
+    let dir_wide = powertoys_win32::string::to_wide(&dir.to_string_lossy());
+    unsafe {
+        let handle = windows_sys::Win32::Storage::FileSystem::FindFirstChangeNotificationW(
+            dir_wide.as_ptr(),
+            0, // don't watch subtree
+            windows_sys::Win32::Storage::FileSystem::FILE_NOTIFY_CHANGE_LAST_WRITE,
+        );
+        if handle.is_null() || handle == INVALID_HANDLE_VALUE { return; }
+        loop {
+            let wait = WaitForSingleObject(handle, u32::MAX);
+            if wait != 0 { break; } // WAIT_OBJECT_0 = 0
+            // Settings file changed — notify main thread
+            PostThreadMessageW(main_thread_id, app::WM_PRIV_SETTINGS_CHANGED, 0, 0);
+            // Wait a bit to debounce rapid writes
+            std::thread::sleep(std::time::Duration::from_millis(200));
+            if windows_sys::Win32::Storage::FileSystem::FindNextChangeNotification(handle) == 0 { break; }
+        }
+        windows_sys::Win32::Foundation::CloseHandle(handle);
     }
 }

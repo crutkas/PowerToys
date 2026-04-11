@@ -252,6 +252,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "crosshairs-core"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "cursorwrap-core"
 version = "0.1.0"
 dependencies = [
@@ -276,6 +284,16 @@ name = "difflib"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6184e33543162437515c2e2b48714794e37845ec9851711914eec9d308f6ebe8"
+
+[[package]]
+name = "environmentvariables-module-interface"
+version = "0.1.0"
+dependencies = [
+ "cc",
+ "powertoys-module-ffi",
+ "serde_json",
+ "windows-sys 0.59.0",
+]
 
 [[package]]
 name = "errno"
@@ -399,6 +417,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "hosts-module-interface"
+version = "0.1.0"
+dependencies = [
+ "cc",
+ "powertoys-module-ffi",
+ "serde_json",
+ "windows-sys 0.59.0",
+]
+
+[[package]]
 name = "http"
 version = "1.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -496,6 +524,16 @@ checksum = "1fa76a2c86f704bdb222d66965fb3d63269ce38518b83cb0575fca855ebb6316"
 dependencies = [
  "adler2",
  "simd-adler32",
+]
+
+[[package]]
+name = "mousejump-module-interface"
+version = "0.1.0"
+dependencies = [
+ "cc",
+ "powertoys-module-ffi",
+ "serde_json",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]

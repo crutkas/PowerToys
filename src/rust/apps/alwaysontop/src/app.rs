@@ -24,6 +24,9 @@ const DECREASE_OPACITY_EVENT: &str =
 const WINDOW_CLASS: &str = "AlwaysOnTopWindow";
 const PINNED_PROP: &str = "AlwaysOnTop_Pinned";
 
+const DESKTOP_REFRESH_TIMER_ID: usize = 42;
+const DESKTOP_REFRESH_INTERVAL_MS: u32 = 1000;
+
 pub struct AlwaysOnTop {
     main_window: HWND,
     hinstance: HINSTANCE,
@@ -31,6 +34,7 @@ pub struct AlwaysOnTop {
     pinned_windows: HashMap<isize, WindowBorder>, // HWND → border
     event_handles: [*mut std::ffi::c_void; 4],     // pin, terminate, inc, dec
     win_event_hooks: Vec<*mut std::ffi::c_void>,
+    vd_utils: VirtualDesktopUtils,
 }
 
 unsafe impl Send for AlwaysOnTop {}
@@ -59,6 +63,7 @@ impl AlwaysOnTop {
             pinned_windows: HashMap::new(),
             event_handles: events,
             win_event_hooks: Vec::new(),
+            vd_utils: VirtualDesktopUtils::new(),
         };
 
         if !aot.init_main_window() {
@@ -161,6 +166,11 @@ impl AlwaysOnTop {
             if !hook.is_null() {
                 self.win_event_hooks.push(hook);
             }
+        }
+
+        // Periodic timer to catch desktop switches that don't fire foreground events
+        unsafe {
+            SetTimer(self.main_window, DESKTOP_REFRESH_TIMER_ID, DESKTOP_REFRESH_INTERVAL_MS, None);
         }
     }
 
@@ -353,15 +363,33 @@ impl AlwaysOnTop {
         }
     }
 
-    fn refresh_borders(&self) {
-        for (&hwnd_key, border) in &self.pinned_windows {
+    fn refresh_borders(&mut self) {
+        let hwnds: Vec<isize> = self.pinned_windows.keys().cloned().collect();
+        for hwnd_key in hwnds {
             let hwnd = hwnd_key as HWND;
-            unsafe {
-                if IsWindow(hwnd) != 0 && IsWindowVisible(hwnd) != 0 {
-                    border.update_position(hwnd);
-                    border.show();
-                } else {
-                    border.hide();
+
+            if self.vd_utils.is_window_on_current_desktop(hwnd) {
+                if self.pinned_windows[&hwnd_key].is_empty() && self.settings.frame_enabled {
+                    // Window returned to the current desktop — recreate its border
+                    if let Some(new_border) = WindowBorder::create(hwnd, self.hinstance, &self.settings) {
+                        self.pinned_windows.insert(hwnd_key, new_border);
+                    }
+                } else if !self.pinned_windows[&hwnd_key].is_empty() {
+                    unsafe {
+                        if IsWindow(hwnd) != 0 && IsWindowVisible(hwnd) != 0 {
+                            self.pinned_windows[&hwnd_key].update_position(hwnd);
+                            self.pinned_windows[&hwnd_key].show();
+                        } else {
+                            self.pinned_windows[&hwnd_key].hide();
+                        }
+                    }
+                }
+            } else {
+                // Window is on a different desktop — destroy its border
+                if !self.pinned_windows[&hwnd_key].is_empty() {
+                    if let Some(old) = self.pinned_windows.insert(hwnd_key, WindowBorder::empty()) {
+                        old.destroy();
+                    }
                 }
             }
         }
@@ -376,6 +404,7 @@ impl AlwaysOnTop {
     }
 
     pub fn cleanup(&mut self) {
+        unsafe { KillTimer(self.main_window, DESKTOP_REFRESH_TIMER_ID); }
         self.unpin_all();
         for hook in &self.win_event_hooks {
             unsafe { UnhookWinEvent(*hook) };
@@ -466,6 +495,10 @@ unsafe extern "system" fn wnd_proc(hwnd: HWND, msg: u32, wparam: WPARAM, lparam:
         }
         WM_DEC_OPACITY => {
             if let Some(a) = aot { a.process_opacity_change(-1); }
+            0
+        }
+        WM_TIMER if wparam == DESKTOP_REFRESH_TIMER_ID => {
+            if let Some(a) = aot { a.refresh_borders(); }
             0
         }
         _ => unsafe { DefWindowProcW(hwnd, msg, wparam, lparam) },

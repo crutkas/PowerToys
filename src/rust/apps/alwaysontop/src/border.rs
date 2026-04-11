@@ -43,6 +43,10 @@ impl WindowBorder {
         Self { border_hwnd: std::ptr::null_mut(), render_target: None, brush: None }
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.border_hwnd.is_null()
+    }
+
     pub fn create(tracked_hwnd: HWND, hinstance: HINSTANCE, settings: &Settings) -> Option<Self> {
         let rect = get_frame_rect(tracked_hwnd, settings.frame_thickness)?;
         let class_name = to_wide(BORDER_CLASS_NAME);
