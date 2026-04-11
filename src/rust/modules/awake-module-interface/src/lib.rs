@@ -87,7 +87,7 @@ impl AwakeModule {
     fn create_process(&self, cmd: &str) -> Result<u32, String> {
         use windows_sys::Win32::System::Threading::{
             CreateProcessW, PROCESS_INFORMATION, STARTUPINFOW,
-            CREATE_NEW_PROCESS_GROUP, CREATE_UNICODE_ENVIRONMENT,
+            CREATE_NEW_PROCESS_GROUP, CREATE_NO_WINDOW,
         };
         use windows_sys::Win32::Foundation::CloseHandle;
 
@@ -104,7 +104,7 @@ impl AwakeModule {
                 std::ptr::null(),
                 std::ptr::null(),
                 0, // bInheritHandles = FALSE
-                CREATE_NEW_PROCESS_GROUP | CREATE_UNICODE_ENVIRONMENT,
+                CREATE_NEW_PROCESS_GROUP | CREATE_NO_WINDOW,
                 std::ptr::null(),
                 std::ptr::null(),
                 &si,
