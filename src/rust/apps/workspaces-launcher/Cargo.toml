@@ -2,13 +2,9 @@
 name = "workspaces-launcher"
 version = "0.1.0"
 edition = "2024"
-
-[workspace]
-
 [[bin]]
 name = "PowerToys_WorkspacesLauncher"
 path = "src/main.rs"
-
 [dependencies]
 powertoys-win32 = { path = "../../libs/powertoys-win32" }
 workspaces-core = { path = "../../libs/workspaces-core" }

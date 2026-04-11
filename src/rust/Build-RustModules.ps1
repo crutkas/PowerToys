@@ -64,10 +64,13 @@ $Dlls = @{
 }
 
 $Exes = @{
-    "PowerToys-AlwaysOnTop.exe"  = "PowerToys.AlwaysOnTop.exe"
-    "PowerToys-ActionRunner.exe" = "PowerToys.ActionRunner.exe"
-    "PowerToys-Update.exe"       = "PowerToys.Update.exe"
-    "awake.exe"                  = "PowerToys.Awake.exe"
+    "PowerToys-AlwaysOnTop.exe"              = "PowerToys.AlwaysOnTop.exe"
+    "PowerToys-ActionRunner.exe"             = "PowerToys.ActionRunner.exe"
+    "PowerToys-Update.exe"                   = "PowerToys.Update.exe"
+    "awake.exe"                              = "PowerToys.Awake.exe"
+    "PowerToys_WorkspacesSnapshotTool.exe"   = "PowerToys.WorkspacesSnapshotTool.exe"
+    "PowerToys_WorkspacesLauncher.exe"       = "PowerToys.WorkspacesLauncher.exe"
+    "PowerToys_WorkspacesWindowArranger.exe" = "PowerToys.WorkspacesWindowArranger.exe"
 }
 
 # Step 1: Build
