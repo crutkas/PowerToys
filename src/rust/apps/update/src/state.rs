@@ -77,10 +77,10 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_state_serialization() {
+    fn test_state_serialization_roundtrip() {
         let state = UpdateState {
             state: "readyToInstall".to_string(),
-            release_page_url: "https://github.com/test".to_string(),
+            release_page_url: "https://github.com/microsoft/PowerToys/releases/tag/v0.82.0".to_string(),
             installer_path: "C:\\temp\\installer.exe".to_string(),
             new_version: "0.82.0".to_string(),
         };
@@ -88,6 +88,8 @@ mod tests {
         let parsed: UpdateState = serde_json::from_str(&json).unwrap();
         assert_eq!(parsed.state, "readyToInstall");
         assert_eq!(parsed.installer_path, "C:\\temp\\installer.exe");
+        assert_eq!(parsed.new_version, "0.82.0");
+        assert_eq!(parsed.release_page_url, state.release_page_url);
     }
 
     #[test]
@@ -95,5 +97,45 @@ mod tests {
         let path = state_file_path();
         assert!(path.to_string_lossy().contains("PowerToys"));
         assert!(path.to_string_lossy().ends_with("UpdateState.json"));
+    }
+
+    #[test]
+    fn test_state_up_to_date_writes_correctly() {
+        store_up_to_date();
+        let content = std::fs::read_to_string(state_file_path()).unwrap();
+        let parsed: UpdateState = serde_json::from_str(&content).unwrap();
+        assert_eq!(parsed.state, "upToDate");
+    }
+
+    #[test]
+    fn test_state_transitions() {
+        // Test the full state machine: upToDate → error → readyToInstall → upToDate
+        store_up_to_date();
+        let s: UpdateState = serde_json::from_str(&std::fs::read_to_string(state_file_path()).unwrap()).unwrap();
+        assert_eq!(s.state, "upToDate");
+
+        store_error("networkError");
+        let s: UpdateState = serde_json::from_str(&std::fs::read_to_string(state_file_path()).unwrap()).unwrap();
+        assert_eq!(s.state, "networkError");
+
+        let path = std::path::Path::new("C:\\test\\installer.msi");
+        store_ready_to_install(path);
+        let s: UpdateState = serde_json::from_str(&std::fs::read_to_string(state_file_path()).unwrap()).unwrap();
+        assert_eq!(s.state, "readyToInstall");
+        assert!(s.installer_path.contains("installer.msi"));
+
+        store_up_to_date();
+        let s: UpdateState = serde_json::from_str(&std::fs::read_to_string(state_file_path()).unwrap()).unwrap();
+        assert_eq!(s.state, "upToDate");
+    }
+
+    #[test]
+    fn test_state_deserialize_with_missing_fields() {
+        // Older state files might not have all fields
+        let json = r#"{"state": "upToDate"}"#;
+        let parsed: UpdateState = serde_json::from_str(json).unwrap();
+        assert_eq!(parsed.state, "upToDate");
+        assert_eq!(parsed.installer_path, "");
+        assert_eq!(parsed.new_version, "");
     }
 }
