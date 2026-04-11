@@ -1,6 +1,6 @@
 # PowerToys Rust Port — TODO
 
-*Last updated: 2026-04-11 16:15 UTC*
+*Last updated: 2026-04-11 17:12 UTC*
 
 ## 🔴 Bug Tracker (test-first methodology)
 
@@ -14,8 +14,8 @@ Every fix follows: read C++ → write failing test → implement fix → test pa
 ### HIGH
 | ID | Component | Bug | C++ Behavior | Rust Behavior | Status |
 |----|-----------|-----|-------------|---------------|--------|
-| `fz-overlay-d2d` | FancyZones | GDI overlay, no zone numbers | D2D + DirectWrite (GPU, anti-aliased, zone numbers) | GDI pixel buffer (CPU, no text) | open |
-| `fz-window-filter` | FancyZones | No window filtering | Skips minimized/tool/invisible/child/excluded/elevated | Snaps everything | open |
+| `fz-overlay-d2d` | FancyZones | GDI overlay, no zone numbers | D2D + DirectWrite (GPU, anti-aliased, zone numbers) | ✅ D2D + DirectWrite | ✅ fixed |
+| `fz-window-filter` | FancyZones | No window filtering | Skips minimized/tool/invisible/child/excluded/elevated | ✅ Filters matching C++ | ✅ fixed |
 | `aot-virtual-desktop` | AlwaysOnTop | No virtual desktop tracking | Hides borders on other desktops | Borders show everywhere | open |
 | `ws-snapshot-fields` | Workspaces | Missing fields in snapshot | Captures packageFullName, appUserModelId, pwaAppId, isElevated | Sets all to empty/false | open |
 
@@ -43,9 +43,9 @@ Every fix follows: read C++ → write failing test → implement fix → test pa
 ### Module Interface DLLs (not yet Rust)
 | Module | LOC | Status |
 |--------|-----|--------|
-| EnvironmentVariables | 293 | not started — simple settings module |
-| Hosts | 300 | not started — simple settings module |
-| MeasureTool (Screen Ruler) | 300 | not started — simple settings module |
+| EnvironmentVariables | 293 | ✅ ported |
+| Hosts | 300 | ✅ ported |
+| MeasureTool (Screen Ruler) | 300 | ✅ ported |
 
 ### Mouse Utilities (all C++ → Rust with D2D)
 | Component | LOC | Rendering | Recommendation |
