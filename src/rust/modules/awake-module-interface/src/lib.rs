@@ -36,29 +36,52 @@ impl AwakeModule {
     }
 
     /// Launch the awake executable.
+    /// Translates PowerToys settings into crutkas/awake CLI flags:
+    ///   --wait-pid <PID>    Exit when runner dies
+    ///   --display           Keep display on (if setting enabled)
+    ///   --idle              Keep system awake (default)
+    ///   --timeout <secs>    Timed mode (if hours/minutes > 0)
     fn launch_awake(&mut self) {
         use windows_sys::Win32::System::Threading::GetCurrentProcessId;
 
         let pid = unsafe { GetCurrentProcessId() };
-
-        // Build command: awake.exe --use-pt-config --pid <runner_pid>
         let exe_path = self.find_awake_exe();
-        let cmd = format!("\"{}\" --use-pt-config --pid {}", exe_path, pid);
 
-        match self.create_process(&cmd) {
+        // Build CLI args from settings
+        let mut args = format!("\"{}\" --wait-pid {}", exe_path, pid);
+
+        // Display flag
+        if self.settings.properties.awake_keep_display_on.value {
+            args.push_str(" --display");
+        }
+
+        // Always keep idle sleep prevented
+        args.push_str(" --idle");
+
+        // Timed mode: convert hours+minutes to seconds for --timeout
+        let mode = self.settings.properties.awake_mode.value;
+        if mode == 2 {
+            // Timed mode
+            let hours = self.settings.properties.awake_hours.value;
+            let minutes = self.settings.properties.awake_minutes.value;
+            let total_secs = hours * 3600 + minutes * 60;
+            if total_secs > 0 {
+                args.push_str(&format!(" --timeout {}", total_secs));
+            }
+        }
+
+        match self.create_process(&args) {
             Ok(child_pid) => {
                 self.child_process = Some(child_pid);
-                eprintln!("[Awake] Launched awake.exe (PID: {})", child_pid);
+                eprintln!("[Awake] Launched: {}", args);
             }
             Err(e) => {
-                eprintln!("[Awake] Failed to launch awake.exe: {}", e);
+                eprintln!("[Awake] Failed to launch: {}", e);
             }
         }
     }
 
     fn find_awake_exe(&self) -> String {
-        // In production, this resolves relative to the module DLL path.
-        // For now, use a placeholder that can be overridden.
         std::env::var("POWERTOYS_AWAKE_EXE")
             .unwrap_or_else(|_| "PowerToys.Awake.exe".to_string())
     }
