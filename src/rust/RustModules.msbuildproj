@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Unified MSBuild project that builds ALL Rust modules and apps via Cargo.
+  Add this single project to PowerToys.slnx instead of 15+ individual ones.
+-->
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <ProjectGuid>{RUST0000-0000-0000-0000-MODULES00001}</ProjectGuid>
+    <ProjectName>RustModules</ProjectName>
+    <RepoRoot Condition="'$(RepoRoot)' == ''">$([MSBuild]::GetDirectoryNameOfFileAbove($(MSBuildProjectDirectory), 'PowerToys.slnx'))\</RepoRoot>
+    <Platform Condition="'$(Platform)' == ''">x64</Platform>
+    <Configuration Condition="'$(Configuration)' == ''">Release</Configuration>
+    <OutDir>$(RepoRoot)$(Platform)\$(Configuration)\</OutDir>
+    <RustWorkspaceDir>$(MSBuildProjectDirectory)\</RustWorkspaceDir>
+    <CargoTargetDir>$(RustWorkspaceDir)target\</CargoTargetDir>
+    <CargoProfile Condition="'$(Configuration)' == 'Release'">release</CargoProfile>
+    <CargoProfile Condition="'$(Configuration)' != 'Release'">debug</CargoProfile>
+    <CargoProfileFlag Condition="'$(Configuration)' == 'Release'">--release</CargoProfileFlag>
+    <CargoProfileFlag Condition="'$(Configuration)' != 'Release'"></CargoProfileFlag>
+    <RustTarget Condition="'$(Platform)' == 'x64'">x86_64-pc-windows-msvc</RustTarget>
+    <RustTarget Condition="'$(Platform)' == 'ARM64'">aarch64-pc-windows-msvc</RustTarget>
+    <CargoOutputDir>$(CargoTargetDir)$(RustTarget)\$(CargoProfile)\</CargoOutputDir>
+  </PropertyGroup>
+  <ItemGroup>
+    <RustDll Include="awake_module_interface.dll"        TargetName="PowerToys.AwakeModuleInterface.dll" />
+    <RustDll Include="alwaysontop_module_interface.dll"  TargetName="PowerToys.AlwaysOnTopModuleInterface.dll" />
+    <RustDll Include="advancedpaste_module_interface.dll" TargetName="PowerToys.AdvancedPasteModuleInterface.dll" />
+    <RustDll Include="cmdnotfound_module_interface.dll"  TargetName="PowerToys.CmdNotFoundModuleInterface.dll" />
+    <RustDll Include="cmdpal_module_interface.dll"       TargetName="PowerToys.CmdPalModuleInterface.dll" />
+    <RustDll Include="cropandlock_module_interface.dll"  TargetName="PowerToys.CropAndLockModuleInterface.dll" />
+    <RustDll Include="fancyzones_module_interface.dll"   TargetName="PowerToys.FancyZonesModuleInterface.dll" />
+    <RustDll Include="lightswitch_module_interface.dll"  TargetName="PowerToys.LightSwitchModuleInterface.dll" />
+    <RustDll Include="mousewithoutborders_module_interface.dll" TargetName="PowerToys.MouseWithoutBordersModuleInterface.dll" />
+    <RustDll Include="poweraccent_module_interface.dll"  TargetName="PowerToys.PowerAccentModuleInterface.dll" />
+    <RustDll Include="powerdisplay_module_interface.dll" TargetName="PowerToys.PowerDisplayModuleInterface.dll" />
+    <RustDll Include="powerocr_module_interface.dll"     TargetName="PowerToys.PowerOCRModuleInterface.dll" />
+    <RustDll Include="shortcutguide_module_interface.dll" TargetName="PowerToys.ShortcutGuideModuleInterface.dll" />
+    <RustDll Include="workspaces_module_interface.dll"   TargetName="PowerToys.WorkspacesModuleInterface.dll" />
+    <RustDll Include="zoomit_module_interface.dll"       TargetName="PowerToys.ZoomItModuleInterface.dll" />
+    <RustExe Include="PowerToys-AlwaysOnTop.exe"  TargetName="PowerToys.AlwaysOnTop.exe" />
+    <RustExe Include="PowerToys-ActionRunner.exe" TargetName="PowerToys.ActionRunner.exe" />
+    <RustExe Include="PowerToys-Update.exe"       TargetName="PowerToys.Update.exe" />
+    <RustExe Include="awake.exe"                  TargetName="PowerToys.Awake.exe" />
+  </ItemGroup>
+  <Target Name="Build" DependsOnTargets="CargoBuild;CopyOutputs" />
+  <Target Name="CargoBuild">
+    <Message Importance="high" Text="Building Rust workspace ($(RustTarget), $(CargoProfile))..." />
+    <Exec Command="cargo build --workspace --target $(RustTarget) $(CargoProfileFlag) --exclude powertoys-integration-tests"
+          WorkingDirectory="$(RustWorkspaceDir)" EnvironmentVariables="CARGO_TARGET_DIR=$(CargoTargetDir)" />
+  </Target>
+  <Target Name="CopyOutputs" DependsOnTargets="CargoBuild">
+    <MakeDir Directories="$(OutDir)" />
+    <Copy SourceFiles="@(RustDll->'$(CargoOutputDir)%(Identity)')" DestinationFiles="@(RustDll->'$(OutDir)%(TargetName)')" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(RustExe->'$(CargoOutputDir)%(Identity)')" DestinationFiles="@(RustExe->'$(OutDir)%(TargetName)')" SkipUnchangedFiles="true" />
+  </Target>
+  <Target Name="Test">
+    <Exec Command="cargo test --workspace --target $(RustTarget)" WorkingDirectory="$(RustWorkspaceDir)" EnvironmentVariables="CARGO_TARGET_DIR=$(CargoTargetDir)" />
+  </Target>
+  <Target Name="Clean">
+    <Exec Command="cargo clean" WorkingDirectory="$(RustWorkspaceDir)" EnvironmentVariables="CARGO_TARGET_DIR=$(CargoTargetDir)" IgnoreExitCode="true" />
+  </Target>
+  <Target Name="Rebuild" DependsOnTargets="Clean;Build" />
+</Project>
