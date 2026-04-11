@@ -46,9 +46,10 @@
 
 | Process | C++/C# WS | Rust WS | C++/C# Private | Rust Private |
 |---------|-----------|---------|----------------|--------------|
+| **Runner (all 15 Rust DLLs)** | 139.5 MB | **109.8 MB** | 87.5 MB | **55.6 MB** |
 | **AlwaysOnTop.exe** | 57.9 MB | 7.0 MB | 39.8 MB | 1.2 MB |
 | **Awake.exe** | ~50 MB | 5.0 MB | — | — |
-| **Runner (all modules)** | 139.5 MB | 137.9 MB | 87.5 MB | 85.6 MB |
+| **PowerAccent.exe** | ~30 MB | 4.8 MB | — | — |
 
 ## Test Results
 
@@ -70,6 +71,7 @@
 | Hash | Description |
 |------|-------------|
 | `183ae8a` | feat: batch port all 15 module interface DLLs to Rust |
+| `75a2a47` | feat: port ActionRunner to Rust |
 | `61a0851` | feat: integrate crutkas/awake as Rust Awake binary |
 | `945ef0c` | test: add unit tests for all 13 batch-generated modules |
 | `183ae8a` | feat: batch port all 15 module interface DLLs to Rust |
