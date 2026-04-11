@@ -1,0 +1,23 @@
+[package]
+name = "powertoys-update"
+version = "0.1.0"
+edition = "2024"
+description = "PowerToys Update — downloads and installs updates from GitHub"
+
+[[bin]]
+name = "PowerToys-Update"
+path = "src/main.rs"
+
+[dependencies]
+windows-sys = { version = "0.59", features = [
+    "Win32_Foundation",
+    "Win32_System_Threading",
+    "Win32_System_LibraryLoader",
+    "Win32_Security",
+    "Win32_System_Registry",
+    "Win32_UI_Shell",
+    "Win32_UI_WindowsAndMessaging",
+] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+ureq = "3"
