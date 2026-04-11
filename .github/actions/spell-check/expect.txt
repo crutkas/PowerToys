@@ -171,9 +171,12 @@ BOOTSTRAPPERINSTALLFOLDER
 Bootstrappers
 BOTTOMALIGN
 boxmodel
+bpb
 BPBF
+bpg
 bpmf
 bpp
+bpr
 breadcrumb
 Browsable
 BROWSEINFO
@@ -293,6 +296,7 @@ commoncontrols
 compmgmt
 COMPOSITIONDISABLED
 COMPOSITIONFULL
+configurators
 CONFIGW
 CONFLICTINGMODIFIERKEY
 CONFLICTINGMODIFIERSHORTCUT
@@ -726,6 +730,7 @@ hdrop
 hdwwiz
 Helpline
 helptext
+hexdigit
 hgdiobj
 HGFE
 hglobal
@@ -775,6 +780,7 @@ hotkeycontrol
 HOTKEYF
 hotkeys
 hotlight
+hotplug
 hotspot
 HPAINTBUFFER
 HPhysical
@@ -988,6 +994,7 @@ localappdata
 localpackage
 LOCALSYSTEM
 LOCATIONCHANGE
+lockapp
 LOCKTYPE
 LOGFONTW
 LOGMSG
@@ -1020,6 +1027,7 @@ LPOSVERSIONINFOEXW
 LPPROC
 LPQUERY
 lprc
+lprect
 LPrivate
 LPSAFEARRAY
 lpstr
@@ -1188,11 +1196,13 @@ myextension
 MYICON
 myorg
 myrepo
+nalgebra
 NAMECHANGE
 namespaceanddescendants
 Nanjing
 nao
 NCACTIVATE
+ncalc
 ncc
 NCCALCSIZE
 NCCREATE
@@ -1656,6 +1666,7 @@ runtimeclass
 runtimeconfig
 runtimepack
 rustc
+rustup
 ruuid
 rvm
 rwin
@@ -1679,6 +1690,7 @@ sddl
 sdf
 SDKDDK
 sdns
+searchhost
 searchterm
 SEARCHUI
 secondaryclickaction
@@ -1732,6 +1744,7 @@ SHELLDLL
 shellex
 SHELLEXECUTEINFO
 SHELLEXECUTEINFOW
+shellexperiencehost
 SHELLICONSIZE
 SHFILEINFO
 SHFILEOPSTRUCT
@@ -1831,6 +1844,7 @@ sszzz
 STACKFRAME
 stackoverflow
 STARTF
+startmenuexperiencehost
 startupapps
 STARTUPINFO
 STARTUPINFOEX
@@ -1941,6 +1955,7 @@ TEXCOORD
 TEXTBOXNEWLINE
 textextractor
 TEXTINCLUDE
+textinputhost
 textvariable
 tfopen
 tgamma
@@ -2033,6 +2048,7 @@ unitconverter
 unittests
 UNLEN
 UNORM
+unported
 unremapped
 unsubscribes
 unvirtualized
@@ -2275,6 +2291,7 @@ XUP
 XVIRTUALSCREEN
 XXL
 xxxxxx
+xywh
 YAxis
 ycombinator
 YDimension
