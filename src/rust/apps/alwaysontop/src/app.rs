@@ -339,7 +339,7 @@ impl AlwaysOnTop {
     pub fn reload_settings(&mut self) {
         self.settings = Settings::load();
         // Update all borders with new settings
-        for (&hwnd_key, border) in &self.pinned_windows {
+        for (&hwnd_key, border) in &mut self.pinned_windows {
             border.update_properties(hwnd_key as HWND, &self.settings);
         }
     }
