@@ -1,6 +1,6 @@
 # PowerToys Rust Port — TODO
 
-*Last updated: 2026-04-11 20:50 UTC*
+*Last updated: 2026-04-11 21:48 UTC*
 
 ## 🔴 Bug Tracker (test-first methodology)
 
@@ -40,62 +40,79 @@ Every fix follows: read C++ → write failing test → implement fix → test pa
 
 ## 📋 Unported C++ Components
 
-### Module Interface DLLs (not yet Rust)
-| Module | LOC | Status |
-|--------|-----|--------|
-| EnvironmentVariables | 293 | ✅ ported |
-| Hosts | 300 | ✅ ported |
-| MeasureTool (Screen Ruler) | 300 | ✅ ported |
+### Module Interface DLLs — ALL 22 PORTED ✅
+All module interface DLLs are Rust. Original 15 + EnvironmentVariables, Hosts,
+MeasureTool, CursorWrap, MouseHighlighter, FindMyMouse, Crosshairs.
 
-### Mouse Utilities (all C++ → Rust with D2D)
-| Component | LOC | Rendering | Recommendation |
-|-----------|-----|-----------|---------------|
-| **FindMyMouse** DLL | 1,726 | C++: WinRT Composition | ✅ Port fully — D2D radial gradient spotlight (same pattern as AOT) |
-| **MouseHighlighter** DLL | 1,134 | C++: Composition | ✅ Port fully — D2D FillEllipse for click circles |
-| **MousePointerCrosshairs** DLL | 1,613 | C++: Composition | ✅ Port fully — D2D DrawLine for crosshairs |
-| **CursorWrap** DLL | 1,179 | Headless | ✅ Port fully — pure logic, WH_MOUSE_LL hook, no UI |
-| **MouseJump** Module Interface | 747 | Headless | ✅ Port — same pattern as other 15 DLLs |
-| **MouseJumpUI** EXE | C# | GDI/WinForms | Keep existing UX |
+### Mouse Utilities — ALL PORTED ✅
+| Component | Status | Tests |
+|-----------|--------|-------|
+| **FindMyMouse** DLL + D2D overlay | ✅ ported | 47 Rust + D2D spotlight overlay |
+| **MouseHighlighter** DLL + D2D overlay | ✅ ported | 46 Rust + DC render target |
+| **MousePointerCrosshairs** DLL + D2D | ✅ ported | 57 Rust |
+| **CursorWrap** DLL | ✅ ported | 60 Rust + 16 C++ MSTest |
+| **MeasureTool** DLL + EXE | ✅ ported | 53 Rust |
+| **MouseJump** Module Interface | ✅ ported | — |
+| **MouseJumpUI** EXE | C# (keep) | — |
 
-### Other C++ EXEs
-| Component | LOC | Rendering | Recommendation |
-|-----------|-----|-----------|---------------|
-| **LightSwitchService** | 2,179 | Headless | ✅ Port — headless scheduler, registry ops |
-| **FileLocksmithCLI** | 2,437 | Headless | ✅ Port — CLI tool, process/handle enumeration |
-| **PowerAccentKeyboardService** | 1,500 | Headless + WH_KEYBOARD_LL | ✅ Port — keyboard hook service |
-| **CmdPalKeyboardService** | 500 | Headless | ✅ Port — small keyboard hook |
-| **CropAndLock** EXE | 1,899 | D2D + DWM Thumbnail | Keep C++ — D2D rendering |
-| **ShortcutGuide** EXE | 2,950 | D2D overlay | Keep C++ — D2D overlay |
-| **MeasureToolCore** | 5,000 | D2D + DirectX | ✅ Port — D2D DrawLine + DirectWrite (same as FZ overlay) |
-| **KeyboardManagerEngine** | 3,000 | Headless + hooks | Possible but complex — defer |
+### Service EXEs — ALL PORTED ✅
+| Component | Status | Tests |
+|-----------|--------|-------|
+| **LightSwitchService** | ✅ ported | 48 Rust + 46 C++ MSTest |
+| **FileLocksmithCLI** | ✅ ported | 24 Rust + 33 C++ MSTest |
+| **PowerAccentKeyboardService** | ✅ ported | 40 Rust + 32 C++ MSTest |
+
+### Remaining (not porting)
+| Component | LOC | Reason |
+|-----------|-----|--------|
+| **CmdPalKeyboardService** | 500 | Small keyboard hook — low priority |
+| **CropAndLock** EXE | 1,899 | D2D + DWM Thumbnail — plan written |
+| **ShortcutGuide** EXE | 2,950 | D2D overlay — keep C++ |
+| **KeyboardManagerEngine** | 3,000 | Complex hooks — defer |
 
 ## 🟢 Shipped & Working
-- [x] All 15 module interface DLLs (vtable mismatch fixed across all 14 adapters)
-- [x] Awake: DLL + EXE (crutkas/awake submodule)
-- [x] AlwaysOnTop: DLL (Rust) + EXE (Rust with D2D borders, GPU-accelerated)
+
+### Phase 1-2 — Module DLLs + Core EXEs
+- [x] All 22 module interface DLLs (vtable mismatch fixed across all adapters)
+- [x] Awake: DLL + EXE
+- [x] AlwaysOnTop: DLL + EXE (D2D borders, GPU-accelerated)
 - [x] ActionRunner EXE
-- [x] Update EXE
-- [x] ShortcutGuide DLL: settings-aware (legacy Win press vs custom hotkey), no startup popup
+- [x] Update EXE (version from registry/PE, download progress)
+- [x] ShortcutGuide DLL: settings-aware (legacy Win press vs custom hotkey)
 - [x] CI pipeline + MSBuild integration + Build-RustModules.ps1
-- [x] Spelling allowlist (2,317 words)
 
 ### Phase 3 — Shared Crates + FancyZones + Workspaces
 - [x] `powertoys-win32` shared crate (37 tests) — wired into AOT, ActionRunner, Update
 - [x] `fancyzones-core` (130 tests) — zone math, layout, data, keyboard snap
-- [x] `fancyzones-engine` (46 tests) — work area, drag handler, engine, overlay
+- [x] `fancyzones-engine` (63 tests) — work area, drag handler, engine, overlay, window filter
 - [x] `workspaces-core` (83 tests) — app detection, JSON, launch status, window arrange
-- [x] FancyZones EXE — drag-to-snap with overlay, Win+Arrow override, keyboard zone cycling
+- [x] FancyZones EXE — drag-to-snap, Win+Arrow override, keyboard zone cycling, D2D overlay
 - [x] Workspaces 3 EXEs — snapshot, launcher, arranger
 
-### Bugs Fixed Today
-- [x] Vtable mismatch in all 14 module adapters (on_hotkey_ex/get_hotkey_ex fields)
-- [x] FancyZones: overlay not rendering (missing UpdateLayeredWindow)
-- [x] FancyZones: Shift-during-drag (was only checked at start, now continuous)
-- [x] FancyZones: keyboard snap direction wrong (zone assignment not tracked on drag-snap)
-- [x] FancyZones: Win+Arrow override (added WH_KEYBOARD_LL hook)
-- [x] ShortcutGuide: launching on startup (on_hotkey missing enabled check)
-- [x] ShortcutGuide: on_hotkey_ex added to vtable for long Win press
-- [x] AlwaysOnTop: D2D borders replacing GDI/SDF
+### Phase 4 — Mouse Utilities + Services
+- [x] `findmymouse-core` (47 tests) + D2D spotlight overlay
+- [x] `highlighter-core` (46 tests) + D2D overlay (DC render target + UpdateLayeredWindow)
+- [x] `crosshairs-core` (57 tests) + D2D crosshair overlay
+- [x] `cursorwrap-core` (60 tests) + module DLL
+- [x] `measuretool-core` (53 tests) + EXE
+- [x] `poweraccent-core` (40 tests) + keyboard service EXE
+- [x] `filelocksmith-core` (24 tests) + CLI EXE
+- [x] `lightswitch-core` (48 tests) + service EXE
+
+### Phase 5 — Shared Libraries + Runner Core
+- [x] `powertoys-settings-ffi` (43 tests) — SettingsAPI replacement with C FFI
+- [x] `powertoys-logger-ffi` (18 tests) — Logger replacement with C FFI
+- [x] `runner-core` (41 tests) — hotkey conflict detection, settings parsing, shortcuts
+
+### C++ MSTest Parity Tests (all in solution, all pass)
+- [x] FancyZones.Tests.cpp (85) in FancyZonesTests/UnitTests
+- [x] HotkeyConflictTests.cpp (15) in runner/UnitTests
+- [x] TopologyTests.cpp (16) in CursorWrap/UnitTests
+- [x] HighlighterTests.cpp (14) in MouseHighlighter/UnitTests
+- [x] CrosshairsTests.cpp (25) in MousePointerCrosshairs/UnitTests
+- [x] LightSwitchTests.cpp (46) in LightSwitch/UnitTests
+- [x] PowerAccentTests.cpp (32) in poweraccent/UnitTests
+- [x] FileLocksmithTests.cpp (33) in FileLocksmith/UnitTests
 
 ### Future
 - [ ] ZoomIt (all tiers — after PT core is done)
@@ -119,13 +136,16 @@ Every fix follows: read C++ → write failing test → implement fix → test pa
 
 | Metric | Before | After |
 |--------|--------|-------|
-| 15 module DLLs | 74.4 MB | 1.6 MB (47x) |
+| Module DLLs | 22 × C++ (74+ MB) | 22 × Rust (1.6 MB, 47x) |
 | AlwaysOnTop EXE | 5,805 KB | 522 KB (11x) |
 | FancyZones EXE | ~50 MB WS | 1.9 MB WS |
 | AlwaysOnTop RAM | 54 MB WS / 40 MB priv | 7.9 MB / 1.3 MB |
 | Awake RAM | ~50 MB | 6.1 MB WS / 0.9 MB priv |
 | Runner RAM (private) | 87.5 MB | 47 MB |
-| Rust tests | 0 | 937 |
+| Rust core logic crates | 0 | 15 |
+| Rust tests | 0 | ~790 |
+| C++ MSTest parity tests | 0 | 266 |
+| App EXEs (Rust) | 0 | 10+ |
 | Release opt level | size (z) | **performance (3)** |
 
 ## 📁 Documents

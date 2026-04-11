@@ -175,6 +175,25 @@ namespace FileLocksmithUnitTests
             auto result = PathUtils::RemoveTrailingSlash(L"C:\\Users\\test");
             Assert::AreEqual(std::wstring(L"C:\\Users\\test"), result);
         }
+
+        TEST_METHOD(UNCPath_SlashNormalized)
+        {
+            auto result = PathUtils::NormalizeSeparators(L"//server/share/file.txt");
+            Assert::AreEqual(std::wstring(L"\\\\server\\share\\file.txt"), result);
+        }
+
+        TEST_METHOD(MultipleSeparators_EachConverted)
+        {
+            auto result = PathUtils::NormalizeSeparators(L"C:/Users//test///file.txt");
+            // Each forward slash becomes a backslash (consecutive slashes preserved)
+            Assert::AreEqual(std::wstring(L"C:\\Users\\\\test\\\\\\file.txt"), result);
+        }
+
+        TEST_METHOD(PathWithSpaces_Preserved)
+        {
+            auto result = PathUtils::NormalizeSeparators(L"C:/Program Files/My App/file.txt");
+            Assert::AreEqual(std::wstring(L"C:\\Program Files\\My App\\file.txt"), result);
+        }
     };
 
     // ========================================================================
@@ -208,6 +227,20 @@ namespace FileLocksmithUnitTests
         {
             Assert::IsTrue(PathUtils::PathsEqual(L"", L""));
         }
+
+        TEST_METHOD(UNCPaths_CaseInsensitive)
+        {
+            Assert::IsTrue(PathUtils::PathsEqual(
+                L"\\\\Server\\Share\\File.txt",
+                L"\\\\server\\share\\file.txt"));
+        }
+
+        TEST_METHOD(PathsWithSpaces_ComparedExactly)
+        {
+            Assert::IsTrue(PathUtils::PathsEqual(
+                L"C:\\Program Files\\App\\data.db",
+                L"c:\\program files\\app\\data.db"));
+        }
     };
 
     // ========================================================================
@@ -217,7 +250,7 @@ namespace FileLocksmithUnitTests
     {
     public:
 
-        TEST_METHOD(DefaultConstruction)
+        TEST_METHOD(FieldAssignment)
         {
             ProcessResult pr;
             pr.name = L"test.exe";

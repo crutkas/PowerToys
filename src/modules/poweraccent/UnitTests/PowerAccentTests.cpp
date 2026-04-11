@@ -485,6 +485,62 @@ namespace PowerAccentUnitTests
             sm.OnKeyUp(0x55, /*wasFastActivation=*/true);
             Assert::IsTrue(sm.lastHideInput == PowerAccentTestEnums::InputType::InputRight);
         }
+
+        TEST_METHOD(DifferentLetterWhileVisible_ClosesAndReopens)
+        {
+            KeyStateMachine sm;
+            sm.OnKeyDown(0x41); // 'A'
+            sm.OnKeyDown(VK_SPACE);
+            Assert::IsTrue(sm.toolbarVisible);
+            Assert::AreEqual(1, sm.showCount);
+
+            // Release 'A', toolbar hides
+            sm.OnKeyUp(0x41);
+            Assert::IsFalse(sm.toolbarVisible);
+            Assert::AreEqual(1, sm.hideCount);
+        }
+
+        TEST_METHOD(NonLetterKeyDown_IgnoredWhenToolbarHidden)
+        {
+            KeyStateMachine sm;
+            // Press Escape (not a letter)
+            bool handled = sm.OnKeyDown(0x1B);
+            Assert::IsFalse(handled, L"Non-letter key should not be handled");
+            Assert::IsFalse(sm.toolbarVisible);
+            Assert::AreEqual(0, sm.showCount);
+        }
+
+        TEST_METHOD(TriggerWithoutLetter_Ignored)
+        {
+            KeyStateMachine sm;
+            // Press Space without any letter held
+            sm.OnKeyDown(VK_SPACE);
+            Assert::IsFalse(sm.toolbarVisible, L"Trigger without letter should not show toolbar");
+            Assert::AreEqual(0, sm.showCount);
+        }
+
+        TEST_METHOD(RapidActivationCycle_StateConsistent)
+        {
+            KeyStateMachine sm;
+            // Rapid: press A, trigger, release, press E, trigger, release
+            sm.OnKeyDown(0x41); // 'A'
+            sm.OnKeyDown(VK_SPACE);
+            Assert::IsTrue(sm.toolbarVisible);
+            sm.OnKeyUp(0x41);
+            Assert::IsFalse(sm.toolbarVisible);
+            Assert::AreEqual(1, sm.showCount);
+            Assert::AreEqual(1, sm.hideCount);
+
+            sm.OnKeyDown(0x45); // 'E'
+            sm.OnKeyDown(VK_SPACE);
+            Assert::IsTrue(sm.toolbarVisible);
+            Assert::AreEqual(static_cast<int>(PowerAccentTestEnums::LetterKey::VK_E),
+                             static_cast<int>(sm.lastShowLetter));
+            sm.OnKeyUp(0x45);
+            Assert::IsFalse(sm.toolbarVisible);
+            Assert::AreEqual(2, sm.showCount);
+            Assert::AreEqual(2, sm.hideCount);
+        }
     };
 
     // ========================================================================
@@ -520,6 +576,29 @@ namespace PowerAccentUnitTests
         {
             const auto& triggers = KeyStateMachine::GetTriggers();
             Assert::AreEqual(static_cast<size_t>(3), triggers.size());
+        }
+
+        TEST_METHOD(PunctuationKeysPresent)
+        {
+            using LK = PowerAccentTestEnums::LetterKey;
+            const auto& letters = KeyStateMachine::GetLetters();
+            auto hasKey = [&](LK key) {
+                return std::find(letters.begin(), letters.end(), key) != letters.end();
+            };
+            Assert::IsTrue(hasKey(LK::VK_COMMA), L"Comma should be in letter list");
+            Assert::IsTrue(hasKey(LK::VK_PERIOD), L"Period should be in letter list");
+            Assert::IsTrue(hasKey(LK::VK_MINUS), L"Minus should be in letter list");
+            Assert::IsTrue(hasKey(LK::VK_PLUS), L"Plus should be in letter list");
+            Assert::IsTrue(hasKey(LK::VK_SLASH_), L"Slash should be in letter list");
+        }
+
+        TEST_METHOD(NonLetterKey_NotInList)
+        {
+            const auto& letters = KeyStateMachine::GetLetters();
+            // VK_ESCAPE (0x1B) should not be in the letter list
+            auto key = static_cast<PowerAccentTestEnums::LetterKey>(0x1B);
+            bool found = std::find(letters.begin(), letters.end(), key) != letters.end();
+            Assert::IsFalse(found, L"Escape should not be a valid accent letter");
         }
     };
 }

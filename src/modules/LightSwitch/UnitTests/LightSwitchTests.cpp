@@ -363,31 +363,85 @@ namespace LightSwitchUnitTests
         {
             // Seattle: lat 47.6, lon -122.3, June 21 2024
             SunTimes times = CalculateSunriseSunset(47.6, -122.3, 2024, 6, 21);
-            // Sunrise should be roughly 5am local, sunset around 9pm local
-            // The raw calculation returns UTC, then toLocal applies timezone
-            // Just verify valid hour ranges
-            Assert::IsTrue(times.sunriseHour >= 0 && times.sunriseHour < 24);
-            Assert::IsTrue(times.sunsetHour >= 0 && times.sunsetHour < 24);
+            Assert::IsTrue(times.sunriseHour >= 0 && times.sunriseHour < 24,
+                           L"Sunrise hour should be in [0,24)");
+            Assert::IsTrue(times.sunsetHour >= 0 && times.sunsetHour < 24,
+                           L"Sunset hour should be in [0,24)");
             Assert::IsTrue(times.sunriseMinute >= 0 && times.sunriseMinute < 60);
             Assert::IsTrue(times.sunsetMinute >= 0 && times.sunsetMinute < 60);
+
+            // UTC sunrise for Seattle June 21 is roughly 12:10 UTC (5:10 PDT)
+            // Allow ±2 hour tolerance since result is converted to machine-local time
+            int riseMinutes = times.sunriseHour * 60 + times.sunriseMinute;
+            int setMinutes = times.sunsetHour * 60 + times.sunsetMinute;
+            int daylight = setMinutes - riseMinutes;
+            if (daylight < 0)
+                daylight += 24 * 60;
+            // Daylight should be at least 14 hours at summer solstice, 47°N
+            Assert::IsTrue(daylight >= 14 * 60,
+                           L"Seattle June 21 should have at least 14 hours of daylight");
         }
 
         TEST_METHOD(Equator_DecemberHasReasonableTimes)
         {
-            // Equator: lat 0, lon 0, Dec 21
+            // Equator: lat 0, lon 0, Dec 21 — roughly 12 hours daylight year-round
             SunTimes times = CalculateSunriseSunset(0.0, 0.0, 2024, 12, 21);
             Assert::IsTrue(times.sunriseHour >= 0 && times.sunriseHour < 24);
             Assert::IsTrue(times.sunsetHour >= 0 && times.sunsetHour < 24);
+
+            int riseMinutes = times.sunriseHour * 60 + times.sunriseMinute;
+            int setMinutes = times.sunsetHour * 60 + times.sunsetMinute;
+            int daylight = setMinutes - riseMinutes;
+            // Handle timezone wrap: if machine TZ shifts sunrise past midnight,
+            // daylight goes negative — add 24h to correct
+            if (daylight < 0)
+                daylight += 24 * 60;
+            // Equator gets ~12 hours year round
+            Assert::IsTrue(daylight >= 10 * 60 && daylight <= 14 * 60,
+                           L"Equator should have 10-14 hours of daylight");
         }
 
         TEST_METHOD(SunriseBeforeSunset_NormalLatitude)
         {
-            // At moderate latitude, sunrise should be before sunset in minutes
+            // New York area: lat 40, lon -74, March equinox
             SunTimes times = CalculateSunriseSunset(40.0, -74.0, 2024, 3, 21);
             int riseMinutes = times.sunriseHour * 60 + times.sunriseMinute;
             int setMinutes = times.sunsetHour * 60 + times.sunsetMinute;
-            Assert::IsTrue(riseMinutes < setMinutes,
-                           L"Sunrise should occur before sunset at moderate latitudes");
+            int daylight = setMinutes - riseMinutes;
+            if (daylight < 0)
+                daylight += 24 * 60;
+            // Equinox: ~12 hours daylight everywhere
+            Assert::IsTrue(daylight >= 11 * 60 && daylight <= 13 * 60,
+                           L"Near equinox, daylight should be approximately 12 hours");
+        }
+
+        TEST_METHOD(WinterSolstice_ShorterDays)
+        {
+            // Seattle Dec 21 — shortest day, ~8.5 hours of daylight
+            SunTimes times = CalculateSunriseSunset(47.6, -122.3, 2024, 12, 21);
+            int riseMinutes = times.sunriseHour * 60 + times.sunriseMinute;
+            int setMinutes = times.sunsetHour * 60 + times.sunsetMinute;
+            int daylight = setMinutes - riseMinutes;
+            if (daylight < 0)
+                daylight += 24 * 60;
+            Assert::IsTrue(daylight >= 7 * 60 && daylight <= 10 * 60,
+                           L"Seattle Dec 21 should have 7-10 hours of daylight");
+        }
+
+        TEST_METHOD(HighLatitude_LongSummerDay)
+        {
+            // Reykjavik Iceland: 64.1°N, June 21 — near midnight sun
+            SunTimes times = CalculateSunriseSunset(64.1, -21.9, 2024, 6, 21);
+            int riseMinutes = times.sunriseHour * 60 + times.sunriseMinute;
+            int setMinutes = times.sunsetHour * 60 + times.sunsetMinute;
+            if (times.sunriseHour >= 0 && times.sunsetHour >= 0)
+            {
+                int daylight = setMinutes - riseMinutes;
+                if (daylight < 0)
+                    daylight += 24 * 60;
+                Assert::IsTrue(daylight >= 20 * 60,
+                               L"Reykjavik June 21 should have 20+ hours of daylight");
+            }
         }
     };
 
