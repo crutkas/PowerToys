@@ -10,7 +10,7 @@ use windows_sys::Win32::UI::Accessibility::{SetWinEventHook, UnhookWinEvent};
 use windows_sys::Win32::UI::Input::KeyboardAndMouse::*;
 use windows_sys::Win32::UI::WindowsAndMessaging::*;
 
-use crate::app::{WM_FZ_MOVESIZE_START, WM_FZ_MOVESIZE_END};
+use crate::app::{WM_FZ_MOVESIZE_START, WM_FZ_MOVESIZE_END, WM_FZ_WINDOW_CREATED};
 
 /// Custom message for keyboard snap (Win+Arrow intercepted).
 pub const WM_FZ_SNAP_HOTKEY: u32 = WM_APP + 3;
@@ -71,6 +71,47 @@ pub fn install_move_size_hooks() -> Vec<WinEventHookGuard> {
     }
 
     guards
+}
+
+/// Install WinEvent hooks for `EVENT_OBJECT_SHOW` to detect new windows appearing.
+/// When a top-level window is shown, we post `WM_FZ_WINDOW_CREATED` so the app can
+/// look up zone history and auto-snap.
+pub fn install_window_create_hooks() -> Vec<WinEventHookGuard> {
+    let mut guards = Vec::new();
+
+    let h = unsafe {
+        SetWinEventHook(
+            EVENT_OBJECT_SHOW,
+            EVENT_OBJECT_SHOW,
+            ptr::null_mut(),
+            Some(window_show_event_proc),
+            0,
+            0,
+            0x0002, // WINEVENT_OUTOFCONTEXT | WINEVENT_SKIPOWNPROCESS
+        )
+    };
+    if !h.is_null() {
+        guards.push(WinEventHookGuard { handle: h });
+    }
+
+    guards
+}
+
+/// WinEvent callback for EVENT_OBJECT_SHOW — fires when a window becomes visible.
+unsafe extern "system" fn window_show_event_proc(
+    _hook: *mut core::ffi::c_void,
+    _event: u32,
+    hwnd: HWND,
+    id_object: i32,
+    _id_child: i32,
+    _event_thread: u32,
+    _event_time: u32,
+) {
+    // OBJID_WINDOW = 0 — only handle top-level window show events
+    if id_object != 0 || hwnd.is_null() { return; }
+    unsafe {
+        PostThreadMessageW(GetCurrentThreadId(), WM_FZ_WINDOW_CREATED, hwnd as usize, 0);
+    }
 }
 
 /// WinEvent callback. Runs on the thread that called `SetWinEventHook` (out-of-context).

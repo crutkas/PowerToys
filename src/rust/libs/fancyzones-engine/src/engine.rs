@@ -319,8 +319,10 @@ mod tests {
         );
         engine.active_drag = Some(drag);
         assert!(engine.is_dragging());
-        let rect = engine.on_move_size_end();
-        assert!(rect.is_some());
+        let snap_info = engine.on_move_size_end();
+        assert!(snap_info.is_some());
+        let info = snap_info.unwrap();
+        assert!(!info.zones.is_empty());
         assert!(!engine.is_dragging());
     }
 
@@ -351,5 +353,19 @@ mod tests {
         let (idx, zones) = result.unwrap();
         assert_eq!(idx, 0);
         assert_eq!(zones, vec![1]);
+    }
+
+    #[test]
+    fn engine_app_history_integration() {
+        let mut engine = make_engine_with_work_areas();
+        engine.record_app_history("test.exe", "dev1", "layout1", vec![0, 1]);
+        let zones = engine.lookup_app_history("test.exe", "dev1");
+        assert_eq!(zones, Some(vec![0, 1]));
+    }
+
+    #[test]
+    fn engine_app_history_miss() {
+        let engine = make_engine_with_work_areas();
+        assert!(engine.lookup_app_history("missing.exe", "dev1").is_none());
     }
 }

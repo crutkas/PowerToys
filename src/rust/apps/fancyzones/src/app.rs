@@ -3,9 +3,10 @@
 use std::cell::RefCell;
 use std::ptr;
 
-use fancyzones_engine::engine::FancyZonesEngine;
+use fancyzones_engine::engine::{FancyZonesEngine, SnapInfo};
 use fancyzones_engine::overlay::{OverlayColors, ZoneOverlay};
 use fancyzones_engine::snap::win32;
+use fancyzones_engine::window_filter;
 
 use windows_sys::Win32::Foundation::HWND;
 use windows_sys::Win32::System::Threading::GetCurrentThreadId;
@@ -18,6 +19,8 @@ pub const WM_FZ_MOVESIZE_START: u32 = WM_APP + 1;
 pub const WM_FZ_MOVESIZE_END: u32 = WM_APP + 2;
 /// Custom message posted when display configuration changes.
 pub const WM_FZ_DISPLAY_CHANGE: u32 = WM_APP + 4;
+/// Custom message posted when a new window is created/shown.
+pub const WM_FZ_WINDOW_CREATED: u32 = WM_APP + 5;
 
 /// Timer ID for mouse-position polling during drag.
 const DRAG_TIMER_ID: usize = 1;
@@ -31,6 +34,7 @@ pub struct FancyZonesApp {
     engine: FancyZonesEngine,
     overlays: Vec<ZoneOverlay>,
     move_size_hooks: Vec<WinEventHookGuard>,
+    window_create_hooks: Vec<WinEventHookGuard>,
     keyboard_hook: Option<KeyboardHookGuard>,
     dragged_hwnd: HWND,
     msg_hwnd: HWND,
@@ -60,6 +64,7 @@ impl FancyZonesApp {
             engine,
             overlays: Vec::new(),
             move_size_hooks: Vec::new(),
+            window_create_hooks: Vec::new(),
             keyboard_hook: None,
             dragged_hwnd: ptr::null_mut(),
             msg_hwnd: ptr::null_mut(),
@@ -72,6 +77,7 @@ impl FancyZonesApp {
         APP_PTR.with(|p| *p.borrow_mut() = self as *mut _);
 
         self.move_size_hooks = hooks::install_move_size_hooks();
+        self.window_create_hooks = hooks::install_window_create_hooks();
         self.keyboard_hook = hooks::install_keyboard_hook(
             self.engine.settings().override_snap_hotkeys
         );
@@ -91,6 +97,7 @@ impl FancyZonesApp {
                     WM_FZ_MOVESIZE_END => self.on_move_size_end(),
                     WM_FZ_SNAP_HOTKEY => self.on_snap_hotkey(msg.lParam as u32),
                     WM_FZ_DISPLAY_CHANGE => self.on_display_change(),
+                    WM_FZ_WINDOW_CREATED => self.on_window_created(msg.wParam as HWND),
                     WM_TIMER if msg.wParam == DRAG_TIMER_ID => self.on_drag_timer(),
                     _ => {
                         TranslateMessage(&msg);
@@ -104,6 +111,7 @@ impl FancyZonesApp {
     pub fn shutdown(&mut self) {
         self.hide_overlays();
         self.move_size_hooks.clear();
+        self.window_create_hooks.clear();
         self.keyboard_hook = None;
         self.engine.shutdown();
         APP_PTR.with(|p| *p.borrow_mut() = ptr::null_mut());
@@ -155,8 +163,9 @@ impl FancyZonesApp {
         // Win+Arrow intercepted by keyboard hook
         let fg = unsafe { GetForegroundWindow() };
         if fg.is_null() { return; }
-        if let Some(snap_rect) = self.engine.on_snap_hotkey(fg, vk_code) {
-            win32::snap_window_to_rect(fg, &snap_rect);
+        if let Some(snap_info) = self.engine.on_snap_hotkey(fg, vk_code) {
+            win32::snap_window_to_rect(fg, &snap_info.rect);
+            self.record_history(fg, &snap_info);
         }
     }
 
@@ -166,14 +175,49 @@ impl FancyZonesApp {
             unsafe { KillTimer(self.msg_hwnd, DRAG_TIMER_ID); }
         }
 
-        if let Some(snap_rect) = self.engine.on_move_size_end() {
+        if let Some(snap_info) = self.engine.on_move_size_end() {
             if !self.dragged_hwnd.is_null() {
-                win32::snap_window_to_rect(self.dragged_hwnd, &snap_rect);
+                win32::snap_window_to_rect(self.dragged_hwnd, &snap_info.rect);
+                self.record_history(self.dragged_hwnd, &snap_info);
             }
         }
 
         self.hide_overlays();
         self.dragged_hwnd = ptr::null_mut();
+    }
+
+    /// When a new window is created/shown, look up history and auto-snap if found.
+    fn on_window_created(&mut self, hwnd: HWND) {
+        if hwnd.is_null() { return; }
+
+        let app_path = match window_filter::get_exe_path(hwnd) {
+            Some(p) => p,
+            None => return,
+        };
+
+        // Try each work area to find a history match.
+        for (_wa_idx, wa) in self.engine.work_areas().iter().enumerate() {
+            let device_key = wa.device_key().to_string();
+            if let Some(zones) = self.engine.lookup_app_history(&app_path, &device_key) {
+                if !zones.is_empty() {
+                    let rect = wa.get_zone_rect(&zones);
+                    win32::snap_window_to_rect(hwnd, &rect);
+                    break;
+                }
+            }
+        }
+    }
+
+    /// Record app zone history after a successful snap.
+    fn record_history(&mut self, hwnd: HWND, snap_info: &SnapInfo) {
+        if let Some(app_path) = window_filter::get_exe_path(hwnd) {
+            self.engine.record_app_history(
+                &app_path,
+                &snap_info.device_key,
+                &snap_info.layout_id,
+                snap_info.zones.clone(),
+            );
+        }
     }
 
     // ---- Overlay management ----------------------------------------------

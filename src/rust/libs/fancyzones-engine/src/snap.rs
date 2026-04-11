@@ -1,7 +1,5 @@
 //! Consolidated snapping utilities: settings loading, keyboard snap, app zone history, Win32 helpers.
 
-use std::collections::HashMap;
-
 use fancyzones_core::data::{
     AppliedLayouts, CustomLayoutsStore, DefaultLayouts, LayoutData, LayoutHotkeys,
     LayoutTemplatesStore, MonitorConfigurationType,
