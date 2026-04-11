@@ -18,7 +18,6 @@ members = [
     "modules/workspaces-module-interface",
     "modules/zoomit-module-interface",
     "apps/alwaysontop",
-    "apps/poweraccent",
     "tests/integration",
 ]
 
