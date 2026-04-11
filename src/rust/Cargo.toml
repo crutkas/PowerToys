@@ -20,7 +20,6 @@ members = [
     "apps/alwaysontop",
     "apps/awake",
     "apps/actionrunner",
-    "apps/cropandlock",
     "tests/integration",
 ]
 
