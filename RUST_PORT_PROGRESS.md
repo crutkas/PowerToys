@@ -1,6 +1,6 @@
 # PowerToys Rust Port — Progress Tracker
 
-*Last updated: 2026-04-11 07:00 UTC*
+*Last updated: 2026-04-11 17:25 UTC*
 
 ## Summary
 
@@ -77,7 +77,7 @@ Rust crates (8 libraries, 7 apps):
 | fancyzones-engine | 46 |
 | workspaces-core | 83 |
 | Apps + integration | 106 |
-| **Total** | **515** |
+| **Total** | **865** |
 
 ## Roadmap
 
