@@ -1,0 +1,25 @@
+[package]
+name = "powertoys-lightswitch"
+version = "0.1.0"
+edition = "2024"
+description = "PowerToys LightSwitch service — automatic theme scheduling"
+
+[workspace]
+
+[[bin]]
+name = "PowerToys-LightSwitch"
+path = "src/main.rs"
+
+[dependencies]
+lightswitch-core = { path = "../../libs/lightswitch-core" }
+windows-sys = { version = "0.59", features = [
+    "Win32_Foundation",
+    "Win32_System_Threading",
+    "Win32_System_Registry",
+    "Win32_Security",
+    "Win32_UI_WindowsAndMessaging",
+    "Win32_System_SystemInformation",
+    "Win32_System_Time",
+] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"

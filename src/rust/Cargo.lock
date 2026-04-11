@@ -275,6 +275,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "crosshairs-module-interface"
+version = "0.1.0"
+dependencies = [
+ "crosshairs-core",
+ "powertoys-module-ffi",
+ "powertoys-win32",
+ "serde",
+ "serde_json",
+ "windows",
+ "windows-sys 0.59.0",
+]
+
+[[package]]
 name = "cursorwrap-core"
 version = "0.1.0"
 dependencies = [
@@ -381,6 +394,7 @@ dependencies = [
  "powertoys-module-ffi",
  "serde",
  "serde_json",
+ "windows",
  "windows-sys 0.59.0",
 ]
 

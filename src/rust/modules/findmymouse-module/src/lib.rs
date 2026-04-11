@@ -18,10 +18,12 @@ use std::ffi::c_int;
 use std::sync::atomic::{AtomicBool, Ordering};
 
 mod wide;
+mod overlay;
 
 pub struct FindMyMouseModule {
     enabled: AtomicBool,
     settings: Settings,
+    overlay: Option<overlay::SpotlightOverlay>,
 }
 
 impl FindMyMouseModule {
@@ -29,6 +31,7 @@ impl FindMyMouseModule {
         Self {
             enabled: AtomicBool::new(false),
             settings: Settings::default(),
+            overlay: None,
         }
     }
 }
@@ -45,14 +48,19 @@ impl PowerToyModule for FindMyMouseModule {
     fn enable(&mut self) {
         if !self.enabled.load(Ordering::SeqCst) {
             self.enabled.store(true, Ordering::SeqCst);
-            // TODO: spawn FindMyMouse overlay thread with raw input handling
+            // Create the overlay window (not yet shown — activated on double-ctrl/shake).
+            let hinstance = unsafe { windows_sys::Win32::System::LibraryLoader::GetModuleHandleW(std::ptr::null()) };
+            self.overlay = overlay::SpotlightOverlay::new(hinstance, &self.settings);
         }
     }
 
     fn disable(&mut self) {
         if self.enabled.load(Ordering::SeqCst) {
             self.enabled.store(false, Ordering::SeqCst);
-            // TODO: tear down FindMyMouse overlay
+            if let Some(ref mut ov) = self.overlay {
+                ov.destroy();
+            }
+            self.overlay = None;
         }
     }
 
@@ -91,6 +99,9 @@ impl PowerToyModule for FindMyMouseModule {
         }
         let json_str = wide::wide_to_string(config);
         self.settings = parse_settings_json(&json_str);
+        if let Some(ref mut ov) = self.overlay {
+            ov.apply_settings(&self.settings);
+        }
     }
 
     fn destroy(&mut self) {
