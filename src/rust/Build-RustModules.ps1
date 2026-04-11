@@ -64,7 +64,8 @@ $Dlls = @{
 }
 
 $Exes = @{
-    "PowerToys-AlwaysOnTop.exe"              = "PowerToys.AlwaysOnTop.exe"
+    # AlwaysOnTop: keep C++ EXE (D2D border rendering matches OS)
+    # "PowerToys-AlwaysOnTop.exe"              = "PowerToys.AlwaysOnTop.exe"
     "PowerToys-ActionRunner.exe"             = "PowerToys.ActionRunner.exe"
     "PowerToys-Update.exe"                   = "PowerToys.Update.exe"
     "awake.exe"                              = "PowerToys.Awake.exe"
