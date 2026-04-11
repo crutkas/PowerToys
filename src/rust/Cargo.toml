@@ -38,6 +38,7 @@ members = [
     "libs/highlighter-core",
     "libs/crosshairs-core",
     "libs/runner-core",
+    "libs/powertoys-settings-ffi",
     "libs/findmymouse-core",
     "libs/cursorwrap-core",
     "libs/measuretool-core",

@@ -1,6 +1,6 @@
 # PowerToys Rust Port — TODO
 
-*Last updated: 2026-04-11 17:55 UTC*
+*Last updated: 2026-04-11 18:10 UTC*
 
 ## 🔴 Bug Tracker (test-first methodology)
 
@@ -125,7 +125,7 @@ Every fix follows: read C++ → write failing test → implement fix → test pa
 | AlwaysOnTop RAM | 54 MB WS / 40 MB priv | 7.9 MB / 1.3 MB |
 | Awake RAM | ~50 MB | 6.1 MB WS / 0.9 MB priv |
 | Runner RAM (private) | 87.5 MB | 47 MB |
-| Rust tests | 0 | 906 |
+| Rust tests | 0 | 949 |
 | Release opt level | size (z) | **performance (3)** |
 
 ## 📁 Documents
