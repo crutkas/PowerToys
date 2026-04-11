@@ -4,7 +4,6 @@ version = "0.1.0"
 edition = "2024"
 description = "Mouse Pointer Crosshairs module interface for PowerToys — Rust implementation"
 
-[workspace]
 
 [lib]
 crate-type = ["cdylib", "staticlib"]

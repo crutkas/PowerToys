@@ -19,6 +19,7 @@ members = [
     "modules/workspaces-module-interface",
     "modules/zoomit-module-interface",
     "modules/measuretool-module-interface",
+    "modules/crosshairs-module-interface",
     "apps/alwaysontop",
     "apps/awake",
     "apps/actionrunner",
