@@ -1,12 +1,38 @@
 //! Virtual desktop tracking for AlwaysOnTop.
-//! Queries registry for current virtual desktop GUID.
+//! Uses IVirtualDesktopManager COM interface to check desktop membership,
+//! with registry fallback for reading the current desktop GUID.
 
+use std::cell::OnceCell;
+use windows::Win32::System::Com::{CoCreateInstance, CLSCTX_ALL};
+use windows::Win32::UI::Shell::{IVirtualDesktopManager, VirtualDesktopManager};
 use windows_sys::Win32::System::Registry::*;
+
+thread_local! {
+    static VDM: OnceCell<Option<IVirtualDesktopManager>> = const { OnceCell::new() };
+}
+
+/// Check if a window is on the current virtual desktop.
+/// Falls back to `true` if the COM interface is unavailable or the call fails.
+pub fn is_window_on_current_desktop(hwnd: windows_sys::Win32::Foundation::HWND) -> bool {
+    VDM.with(|cell| {
+        let vdm = cell.get_or_init(|| {
+            unsafe { CoCreateInstance(&VirtualDesktopManager, None, CLSCTX_ALL).ok() }
+        });
+        match vdm {
+            Some(vdm) => unsafe {
+                vdm.IsWindowOnCurrentVirtualDesktop(windows::Win32::Foundation::HWND(hwnd))
+                    .map(|b| b.as_bool())
+                    .unwrap_or(true)
+            },
+            None => true,
+        }
+    })
+}
 
 /// Get the current virtual desktop GUID from registry.
 pub fn get_current_desktop_id() -> Option<[u8; 16]> {
     let subkey = powertoys_win32::string::to_wide(
-        "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\VirtualDesktops"
+        "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\VirtualDesktops",
     );
     let value = powertoys_win32::string::to_wide("CurrentVirtualDesktop");
     unsafe {
@@ -18,22 +44,19 @@ pub fn get_current_desktop_id() -> Option<[u8; 16]> {
         let mut size = 16u32;
         let mut dtype = 0u32;
         let r = RegQueryValueExW(
-            hkey, value.as_ptr(), std::ptr::null(), &mut dtype,
-            data.as_mut_ptr(), &mut size,
+            hkey,
+            value.as_ptr(),
+            std::ptr::null(),
+            &mut dtype,
+            data.as_mut_ptr(),
+            &mut size,
         );
         RegCloseKey(hkey);
-        if r != 0 || size < 16 { return None; }
+        if r != 0 || size < 16 {
+            return None;
+        }
         Some(data)
     }
-}
-
-/// Check if a window is on the current virtual desktop.
-/// Uses IVirtualDesktopManager COM interface.
-pub fn is_window_on_current_desktop(hwnd: windows_sys::Win32::Foundation::HWND) -> bool {
-    // For now, always return true — COM interface requires more complex setup
-    // TODO: implement via IVirtualDesktopManager::IsWindowOnCurrentVirtualDesktop
-    let _ = hwnd;
-    true
 }
 
 #[cfg(test)]

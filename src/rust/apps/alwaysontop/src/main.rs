@@ -19,6 +19,14 @@ use windows_sys::Win32::UI::WindowsAndMessaging::*;
 static MAIN_THREAD_ID: Mutex<u32> = Mutex::new(0);
 
 fn main() {
+    // Initialize COM (required for IVirtualDesktopManager)
+    unsafe {
+        let _ = windows::Win32::System::Com::CoInitializeEx(
+            None,
+            windows::Win32::System::Com::COINIT_APARTMENTTHREADED,
+        );
+    }
+
     let args: Vec<String> = std::env::args().collect();
 
     // Parse parent PID from command line (runner passes it)

@@ -404,7 +404,7 @@ impl AlwaysOnTop {
         for hwnd_key in hwnds {
             let hwnd = hwnd_key as HWND;
 
-            if true {
+            if crate::virtual_desktop::is_window_on_current_desktop(hwnd) {
                 if self.pinned_windows[&hwnd_key].is_empty() && self.settings.frame_enabled {
                     // Window returned to the current desktop — recreate its border
                     if let Some(new_border) = WindowBorder::create(hwnd, self.hinstance, &self.settings) {
