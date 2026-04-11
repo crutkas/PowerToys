@@ -1,0 +1,12 @@
+[package]
+name = "highlighter-core"
+version = "0.1.0"
+edition = "2024"
+description = "Mouse Highlighter core logic — highlight lifecycle, fade animation, settings (no Win32)"
+
+# Standalone workspace so `cargo test` works without modifying the root Cargo.toml.
+# When this crate is added to the root workspace members, remove this line.
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
