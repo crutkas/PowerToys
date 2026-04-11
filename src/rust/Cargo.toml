@@ -25,6 +25,7 @@ members = [
     "libs/powertoys-win32",
     "libs/fancyzones-core",
     "libs/workspaces-core",
+    "libs/fancyzones-engine",
 ]
 
 # Release profile: optimize for size with LTO

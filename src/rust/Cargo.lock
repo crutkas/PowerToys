@@ -276,6 +276,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "fancyzones-engine"
+version = "0.1.0"
+dependencies = [
+ "fancyzones-core",
+ "powertoys-win32",
+ "serde",
+ "serde_json",
+ "windows-sys 0.59.0",
+]
+
+[[package]]
 name = "fancyzones-module-interface"
 version = "0.1.0"
 dependencies = [
