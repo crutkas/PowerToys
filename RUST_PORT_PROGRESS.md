@@ -56,7 +56,7 @@
 
 | Suite | Tests | Status |
 |-------|-------|--------|
-| Rust: FFI bridge + modules + integration | 113 | ✅ |
+| Rust: FFI bridge + modules + AlwaysOnTop | 128 | ✅ |
 | Rust: awake binary (crutkas/awake) | 84 | ✅ |
 | Rust: Update.exe | 19 | ✅ |
 | C++: CommonLib + CommonUtils | 524 | ✅ |
@@ -66,7 +66,7 @@
 | .NET: PowerToys Run (Wox) | 130 | ✅ |
 | .NET: MouseJump | 52 | ✅ |
 | .NET: AdvancedPaste | 42 | ✅ |
-| **Total** | **1,627+** | **0 failures** |
+| **Total** | **1,750+** | **0 failures** |
 
 ## Roadmap
 
