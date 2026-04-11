@@ -179,6 +179,14 @@ impl AlwaysOnTop {
         if self.is_pinned(fg) {
             self.unpin_window(fg);
         } else {
+            // Check excluded apps
+            if self.is_excluded(fg) {
+                return;
+            }
+            // Check game mode
+            if self.settings.block_in_game_mode && is_game_mode_active() {
+                return;
+            }
             self.pin_window(fg);
         }
     }
@@ -193,6 +201,29 @@ impl AlwaysOnTop {
 
     fn is_pinned(&self, hwnd: HWND) -> bool {
         self.pinned_windows.contains_key(&(hwnd as isize))
+    }
+
+    fn is_excluded(&self, hwnd: HWND) -> bool {
+        if self.settings.excluded_apps.is_empty() { return false; }
+        // Get process exe name
+        let mut pid: u32 = 0;
+        unsafe { GetWindowThreadProcessId(hwnd, &mut pid); }
+        if pid == 0 { return false; }
+        let handle = unsafe {
+            windows_sys::Win32::System::Threading::OpenProcess(
+                windows_sys::Win32::System::Threading::PROCESS_QUERY_LIMITED_INFORMATION, 0, pid)
+        };
+        if handle.is_null() { return false; }
+        let mut buf = [0u16; 260];
+        let mut size = buf.len() as u32;
+        let ok = unsafe {
+            windows_sys::Win32::System::Threading::QueryFullProcessImageNameW(handle, 0, buf.as_mut_ptr(), &mut size)
+        };
+        unsafe { CloseHandle(handle); }
+        if ok == 0 { return false; }
+        let path = String::from_utf16_lossy(&buf[..size as usize]);
+        let exe = path.rsplit('\\').next().unwrap_or("").to_lowercase();
+        self.settings.excluded_apps.iter().any(|app| exe.contains(&app.to_lowercase()))
     }
 
     fn pin_window(&mut self, hwnd: HWND) {
@@ -497,3 +528,14 @@ fn play_sound(sound_type: SoundType) {
 
 #[derive(Clone, Copy)]
 enum SoundType { On, Off, IncreaseOpacity, DecreaseOpacity }
+
+/// Detect if a game is running in full-screen exclusive mode.
+/// Uses SHQueryUserNotificationState which returns QUNS_BUSY or QUNS_RUNNING_D3D_FULL_SCREEN.
+fn is_game_mode_active() -> bool {
+    use windows_sys::Win32::UI::Shell::SHQueryUserNotificationState;
+    let mut state: i32 = 0;
+    let hr = unsafe { SHQueryUserNotificationState(&mut state) };
+    if hr != 0 { return false; }
+    // QUNS_BUSY = 2, QUNS_RUNNING_D3D_FULL_SCREEN = 3, QUNS_PRESENTATION_MODE = 4
+    state >= 2
+}

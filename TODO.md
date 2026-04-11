@@ -25,8 +25,8 @@ Every fix follows: read C++ → write failing test → implement fix → test pa
 | `aot-sound` | AlwaysOnTop | No sound on pin/unpin (PlaySoundW) | ✅ fixed |
 | `aot-file-watcher` | AlwaysOnTop | Settings don't auto-reload on file change | open |
 | `aot-system-menu` | AlwaysOnTop | No "Pin/Unpin" in title bar context menu | open |
-| `aot-game-mode` | AlwaysOnTop | Pins windows in full-screen games | open |
-| `aot-excluded-apps` | AlwaysOnTop | No exclusion list for apps | open |
+| `aot-game-mode` | AlwaysOnTop | Pins windows in full-screen games | ✅ fixed |
+| `aot-excluded-apps` | AlwaysOnTop | No exclusion list for apps | ✅ fixed |
 | `fz-app-history` | FancyZones | Windows forget zones across sessions | open |
 | `fz-display-change` | FancyZones | Zones not recalculated on monitor change | open |
 | `fz-editor` | FancyZones | Can't launch editor or reload layouts | open |
