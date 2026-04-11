@@ -35,23 +35,26 @@
 
 ## Application EXEs Ported
 
-| EXE | C++ | Rust | Ratio | Status |
-|-----|-----|------|-------|--------|
-| AlwaysOnTop.exe | 5,800 KB | 178 KB | 33x | ✅ |
-| Awake.exe (via crutkas/awake) | — | — | — | 🔜 Ready to integrate |
+| EXE | Original | Rust | Ratio | RAM (WS) | Status |
+|-----|----------|------|-------|----------|--------|
+| AlwaysOnTop.exe | 5,800 KB (C++) | 178 KB | 33x | 57.9→7.0 MB | ✅ |
+| Awake.exe | 254 KB (C#) +.NET | 401 KB | standalone | 50→5.0 MB | ✅ via crutkas/awake |
+
+*Awake.exe is larger on disk (401 KB vs 254 KB) but eliminates the ~100 MB .NET runtime dependency and uses 90% less RAM.*
 
 ## RAM Usage
 
-| Process | C++ WS | Rust WS | C++ Private | Rust Private |
-|---------|--------|---------|-------------|--------------|
+| Process | C++/C# WS | Rust WS | C++/C# Private | Rust Private |
+|---------|-----------|---------|----------------|--------------|
 | **AlwaysOnTop.exe** | 57.9 MB | 7.0 MB | 39.8 MB | 1.2 MB |
+| **Awake.exe** | ~50 MB | 5.0 MB | — | — |
 | **Runner (all modules)** | 139.5 MB | 137.9 MB | 87.5 MB | 85.6 MB |
 
 ## Test Results
 
 | Suite | Tests | Status |
 |-------|-------|--------|
-| Rust: FFI bridge + modules + integration | 36 | ✅ |
+| Rust: FFI bridge + modules + integration | 113 | ✅ |
 | Rust: awake binary (crutkas/awake) | 84 | ✅ |
 | C++: CommonLib + CommonUtils | 524 | ✅ |
 | .NET: ColorPicker | 378 | ✅ |
@@ -67,6 +70,9 @@
 | Hash | Description |
 |------|-------------|
 | `183ae8a` | feat: batch port all 15 module interface DLLs to Rust |
+| `61a0851` | feat: integrate crutkas/awake as Rust Awake binary |
+| `945ef0c` | test: add unit tests for all 13 batch-generated modules |
+| `183ae8a` | feat: batch port all 15 module interface DLLs to Rust |
 | `e32ae07` | feat: add rounded corner borders + progress tracker |
 | `9a7b1ee` | fix: rewrite border rendering with proper UpdateLayeredWindow |
 | `7e9fbf9` | fix: dangling AOT_INSTANCE pointer + stale terminate event |
@@ -81,7 +87,7 @@
 ```
 PowerToys.exe (C++ runner — unchanged)
   ├─ loads PowerToys.AwakeModuleInterface.dll               ← RUST ✅
-  │    └─ launches PowerToys.Awake.exe                       (C#, Rust binary ready)
+  │    └─ launches PowerToys.Awake.exe                       ← RUST ✅ (crutkas/awake)
   ├─ loads PowerToys.AlwaysOnTopModuleInterface.dll          ← RUST ✅
   │    └─ launches PowerToys.AlwaysOnTop.exe                 ← RUST ✅
   ├─ loads PowerToys.FancyZonesModuleInterface.dll           ← RUST ✅
