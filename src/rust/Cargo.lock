@@ -383,6 +383,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "powertoys-cropandlock"
+version = "0.1.0"
+dependencies = [
+ "windows-sys 0.59.0",
+]
+
+[[package]]
 name = "powertoys-integration-tests"
 version = "0.1.0"
 dependencies = [

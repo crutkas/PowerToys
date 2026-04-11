@@ -1,0 +1,21 @@
+[package]
+name = "powertoys-cropandlock"
+version = "0.1.0"
+edition = "2024"
+description = "PowerToys CropAndLock - crop and pin window regions"
+
+[[bin]]
+name = "PowerToys-CropAndLock"
+path = "src/main.rs"
+
+[dependencies]
+windows-sys = { version = "0.59", features = [
+    "Win32_Foundation",
+    "Win32_System_Threading",
+    "Win32_System_LibraryLoader",
+    "Win32_Security",
+    "Win32_UI_WindowsAndMessaging",
+    "Win32_UI_Input_KeyboardAndMouse",
+    "Win32_Graphics_Gdi",
+    "Win32_Graphics_Dwm",
+] }
