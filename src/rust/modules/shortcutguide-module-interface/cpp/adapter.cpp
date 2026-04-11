@@ -1,4 +1,5 @@
 // C++ adapter: wraps Rust extern "C" functions in a PowertoyModuleIface vtable.
+
 //
 // This is ~60 LOC of glue. The Rust DLL exports rust_module_create() which
 // returns a ModuleFunctionTable*. This adapter calls those function pointers
@@ -9,6 +10,7 @@
 
 // When building inside PowerToys tree, use the real header.
 // When building standalone (cargo test), use the local minimal copy.
+#include <optional>
 #ifdef POWERTOYS_TREE
 #include <powertoy_module_interface.h>
 #else
@@ -37,6 +39,7 @@ struct RustModuleFunctionTable {
     bool (*keep_track_of_pressed_win_key)(void* ctx);
     unsigned int (*milliseconds_win_key_must_be_pressed)(void* ctx);
     void (*on_hotkey_ex)(void* ctx);
+    bool (*get_hotkey_ex)(void* ctx, PowertoyModuleIface::HotkeyEx* out);
     powertoys_gpo::gpo_rule_configured_t (*gpo_policy_enabled_configuration)(void* ctx);
 };
 
@@ -138,6 +141,9 @@ public:
     void OnHotkeyEx() override {
         m_table->on_hotkey_ex(m_table->context);
     }
+
+    // GetHotkeyEx: base class returns std::nullopt by default.
+    // Custom hotkey is handled via get_hotkeys/on_hotkey instead.
 
     powertoys_gpo::gpo_rule_configured_t gpo_policy_enabled_configuration() override {
         return m_table->gpo_policy_enabled_configuration(m_table->context);

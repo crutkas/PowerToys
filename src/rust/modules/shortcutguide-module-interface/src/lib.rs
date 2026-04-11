@@ -10,15 +10,63 @@ pub struct Module {
     enabled: AtomicBool,
     process_handle: Option<*mut std::ffi::c_void>,
     terminate_event: *mut std::ffi::c_void,
+    use_legacy_win_key: bool,
+    press_time_ms: u32,
+    hotkey: HotkeyEx,
 }
 unsafe impl Send for Module {}
 
 impl Module {
     pub fn new() -> Self {
-        Self {
+        let mut m = Self {
             enabled: AtomicBool::new(false),
             process_handle: None,
             terminate_event: create_event("Local\\ShortcutGuide-ExitEvent-35697cdd-a3d2-47d6-a246-34efcc73eac0"),
+            use_legacy_win_key: true,
+            press_time_ms: 900,
+            hotkey: HotkeyEx { modifiers_mask: 0, vk_code: 0, id: 0 },
+        };
+        m.load_settings();
+        m
+    }
+
+    fn load_settings(&mut self) {
+        let path = match powertoys_win32::settings::module_settings_path("Shortcut Guide") {
+            Some(p) => p,
+            None => return,
+        };
+        let json_str = match std::fs::read_to_string(&path) {
+            Ok(s) => s,
+            Err(_) => return,
+        };
+        let root: serde_json::Value = match serde_json::from_str(&json_str) {
+            Ok(v) => v,
+            Err(_) => return,
+        };
+        let props = match root.get("properties") {
+            Some(p) => p,
+            None => return,
+        };
+
+        // Legacy Win key press behavior
+        if let Some(v) = props.get("use_legacy_press_win_key_behavior").and_then(|o| o.get("value")).and_then(|v| v.as_bool()) {
+            self.use_legacy_win_key = v;
+        }
+
+        // Press time
+        if let Some(v) = props.get("press_time").and_then(|o| o.get("value")).and_then(|v| v.as_i64()) {
+            if v >= 0 { self.press_time_ms = v as u32; }
+        }
+
+        // Custom hotkey
+        if let Some(hk) = props.get("open_shortcutguide") {
+            let mut mask: u16 = 0;
+            if hk.get("win").and_then(|v| v.as_bool()).unwrap_or(false) { mask |= 0x0008; } // MOD_WIN
+            if hk.get("ctrl").and_then(|v| v.as_bool()).unwrap_or(false) { mask |= 0x0002; } // MOD_CONTROL
+            if hk.get("shift").and_then(|v| v.as_bool()).unwrap_or(false) { mask |= 0x0004; } // MOD_SHIFT
+            if hk.get("alt").and_then(|v| v.as_bool()).unwrap_or(false) { mask |= 0x0001; } // MOD_ALT
+            let code = hk.get("code").and_then(|v| v.as_i64()).unwrap_or(0) as u16;
+            self.hotkey = HotkeyEx { modifiers_mask: mask, vk_code: code, id: 0 };
         }
     }
 
@@ -36,6 +84,17 @@ impl Module {
             sei.nShow = SW_SHOWNORMAL;
             sei.lpParameters = params.as_ptr();
             if ShellExecuteExW(&mut sei) != 0 { self.process_handle = Some(sei.hProcess); }
+        }
+    }
+
+    fn toggle_process(&mut self) {
+        if let Some(h) = self.process_handle.take() {
+            unsafe {
+                windows_sys::Win32::System::Threading::TerminateProcess(h, 0);
+                windows_sys::Win32::Foundation::CloseHandle(h);
+            }
+        } else {
+            self.launch_process();
         }
     }
 }
@@ -65,32 +124,49 @@ impl PowerToyModule for Module {
         if !sz.is_null() { unsafe { *sz = 0; } }
         false
     }
-    fn set_config(&mut self, _config: *const u16) {}
+    fn set_config(&mut self, _config: *const u16) {
+        self.load_settings();
+    }
     fn destroy(&mut self) { self.disable(); }
 
-    fn keep_track_of_pressed_win_key(&self) -> bool {
-        // ShortcutGuide activates on long Win key press
+    fn get_hotkeys(&self, buffer: *mut Hotkey, buffer_size: usize) -> usize {
+        if self.use_legacy_win_key {
+            return 0; // No hotkey — using long Win press via keep_track_of_pressed_win_key
+        }
+        if buffer.is_null() || buffer_size == 0 {
+            return 1; // Need 1 slot
+        }
+        let hk = Hotkey {
+            win: (self.hotkey.modifiers_mask & 0x0008) != 0,
+            ctrl: (self.hotkey.modifiers_mask & 0x0002) != 0,
+            shift: (self.hotkey.modifiers_mask & 0x0004) != 0,
+            alt: (self.hotkey.modifiers_mask & 0x0001) != 0,
+            key: self.hotkey.vk_code as u8,
+            id: 1,
+            is_shown: true,
+        };
+        unsafe { *buffer = hk; }
+        1
+    }
+
+    fn on_hotkey(&mut self, _hotkey_id: usize) -> bool {
+        self.toggle_process();
         true
     }
 
+    fn keep_track_of_pressed_win_key(&self) -> bool {
+        self.use_legacy_win_key
+    }
+
     fn milliseconds_win_key_must_be_pressed(&self) -> u32 {
-        // Default: 900ms hold before showing the guide
-        900
+        self.press_time_ms
     }
 
     fn on_hotkey_ex(&mut self) {
         if !self.enabled.load(Ordering::SeqCst) {
             return;
         }
-        // Toggle: if process running, kill it; otherwise start it
-        if let Some(h) = self.process_handle.take() {
-            unsafe {
-                windows_sys::Win32::System::Threading::TerminateProcess(h, 0);
-                windows_sys::Win32::Foundation::CloseHandle(h);
-            }
-        } else {
-            self.launch_process();
-        }
+        self.toggle_process();
     }
 
     fn gpo_policy_enabled_configuration(&self) -> GpoRuleConfigured {

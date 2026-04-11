@@ -7,6 +7,7 @@ build = "build.rs"
 crate-type = ["cdylib", "staticlib"]
 [dependencies]
 powertoys-module-ffi = { path = "../../powertoys-module-ffi" }
+powertoys-win32 = { path = "../../libs/powertoys-win32" }
 windows-sys = { workspace = true }
 serde_json = { workspace = true }
 [build-dependencies]
