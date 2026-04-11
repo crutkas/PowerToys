@@ -18,6 +18,7 @@
     <ClCompile Include="pch.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="FancyZones.Tests.cpp" />
     <ClCompile Include="Zone.Spec.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -67,9 +68,6 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="WindowProcessingTests.Spec.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="RustPortedTests.Spec.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
