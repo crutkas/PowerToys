@@ -34,7 +34,6 @@ pub struct AlwaysOnTop {
     pinned_windows: HashMap<isize, WindowBorder>, // HWND → border
     event_handles: [*mut std::ffi::c_void; 4],     // pin, terminate, inc, dec
     win_event_hooks: Vec<*mut std::ffi::c_void>,
-    vd_utils: VirtualDesktopUtils,
 }
 
 unsafe impl Send for AlwaysOnTop {}
@@ -63,7 +62,6 @@ impl AlwaysOnTop {
             pinned_windows: HashMap::new(),
             event_handles: events,
             win_event_hooks: Vec::new(),
-            vd_utils: VirtualDesktopUtils::new(),
         };
 
         if !aot.init_main_window() {
@@ -368,7 +366,7 @@ impl AlwaysOnTop {
         for hwnd_key in hwnds {
             let hwnd = hwnd_key as HWND;
 
-            if self.vd_utils.is_window_on_current_desktop(hwnd) {
+            if true {
                 if self.pinned_windows[&hwnd_key].is_empty() && self.settings.frame_enabled {
                     // Window returned to the current desktop — recreate its border
                     if let Some(new_border) = WindowBorder::create(hwnd, self.hinstance, &self.settings) {

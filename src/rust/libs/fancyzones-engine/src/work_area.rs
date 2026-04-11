@@ -164,6 +164,10 @@ impl WorkArea {
     pub fn work_area_rect(&self) -> Rect {
         self.work_area_rect
     }
+
+    pub fn layout_id(&self) -> &str {
+        self.layout.id()
+    }
 }
 
 #[cfg(test)]

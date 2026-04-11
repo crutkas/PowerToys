@@ -210,122 +210,9 @@ pub fn direction_from_vk(vk: u32) -> Option<SnapDirection> {
     }
 }
 
-// ---- App Zone History ----
+// ---- App Zone History (re-exported from app_history module) ----
 
-/// A single entry in the app zone history.
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
-pub struct AppZoneEntry {
-    pub layout_id: String,
-    pub device_key: String,
-    pub zone_index_set: ZoneIndexSet,
-}
-
-/// Tracks which zones each application was last assigned to.
-pub struct AppZoneHistory {
-    history: HashMap<String, Vec<AppZoneEntry>>,
-}
-
-impl AppZoneHistory {
-    pub fn new() -> Self {
-        Self {
-            history: HashMap::new(),
-        }
-    }
-
-    pub fn load_from_json(json: &serde_json::Value) -> Self {
-        let mut history = HashMap::new();
-        if let Some(arr) = json.get("app-zone-history").and_then(|v| v.as_array()) {
-            for item in arr {
-                let app_path = item
-                    .get("app-path")
-                    .and_then(|v| v.as_str())
-                    .unwrap_or("")
-                    .to_string();
-                if let Some(entries_arr) = item.get("history").and_then(|v| v.as_array()) {
-                    let entries: Vec<AppZoneEntry> = entries_arr
-                        .iter()
-                        .filter_map(|e| {
-                            let layout_id =
-                                e.get("layout-id").and_then(|v| v.as_str())?.to_string();
-                            let device_key = e
-                                .get("device-id")
-                                .and_then(|v| v.as_str())
-                                .unwrap_or("")
-                                .to_string();
-                            let zone_index_set = e
-                                .get("zone-index-set")
-                                .and_then(|v| v.as_array())
-                                .map(|a| a.iter().filter_map(|v| v.as_i64()).collect())
-                                .unwrap_or_default();
-                            Some(AppZoneEntry {
-                                layout_id,
-                                device_key,
-                                zone_index_set,
-                            })
-                        })
-                        .collect();
-                    if !entries.is_empty() {
-                        history.insert(app_path, entries);
-                    }
-                }
-            }
-        }
-        Self { history }
-    }
-
-    pub fn set_app_last_zones(&mut self, app_path: &str, entry: AppZoneEntry) {
-        self.history
-            .entry(app_path.to_string())
-            .or_default()
-            .push(entry);
-    }
-
-    pub fn get_app_last_zones(
-        &self,
-        app_path: &str,
-        device_key: &str,
-        layout_id: &str,
-    ) -> Option<&ZoneIndexSet> {
-        self.history
-            .get(app_path)?
-            .iter()
-            .rev()
-            .find(|e| e.device_key == device_key && e.layout_id == layout_id)
-            .map(|e| &e.zone_index_set)
-    }
-
-    pub fn to_json(&self) -> serde_json::Value {
-        let entries: Vec<serde_json::Value> = self
-            .history
-            .iter()
-            .map(|(path, entries)| {
-                let history: Vec<serde_json::Value> = entries
-                    .iter()
-                    .map(|e| {
-                        serde_json::json!({
-                            "layout-id": e.layout_id,
-                            "device-id": e.device_key,
-                            "zone-index-set": e.zone_index_set,
-                        })
-                    })
-                    .collect();
-                serde_json::json!({
-                    "app-path": path,
-                    "history": history,
-                })
-            })
-            .collect();
-        serde_json::json!({ "app-zone-history": entries })
-    }
-
-    pub fn save_to_file(&self, path: &std::path::Path) -> std::io::Result<()> {
-        let json = self.to_json();
-        std::fs::write(
-            path,
-            serde_json::to_string_pretty(&json).unwrap_or_default(),
-        )
-    }
-}
+pub use crate::app_history::{AppZoneHistory, HistoryEntry as AppZoneEntry};
 
 // ---- Win32 Window Utilities ----
 
@@ -580,43 +467,27 @@ mod tests {
         assert!(handler.extend_zones.is_none());
     }
 
-    // ---- App Zone History tests ----
+    // ---- App Zone History re-export tests ----
 
     #[test]
-    fn app_history_set_and_get() {
+    fn app_history_record_and_lookup() {
         let mut history = AppZoneHistory::new();
-        history.set_app_last_zones(
-            "app.exe",
-            AppZoneEntry {
-                layout_id: "layout1".into(),
-                device_key: "dev1".into(),
-                zone_index_set: vec![0, 1],
-            },
-        );
-        let zones = history.get_app_last_zones("app.exe", "dev1", "layout1");
+        history.record("app.exe", "dev1", "layout1", vec![0, 1]);
+        let zones = history.lookup("app.exe", "dev1");
         assert!(zones.is_some());
-        assert_eq!(zones.unwrap(), &vec![0, 1]);
+        assert_eq!(zones.unwrap(), vec![0, 1]);
     }
 
     #[test]
     fn app_history_missing_app() {
         let history = AppZoneHistory::new();
-        assert!(history
-            .get_app_last_zones("missing.exe", "dev1", "layout1")
-            .is_none());
+        assert!(history.lookup("missing.exe", "dev1").is_none());
     }
 
     #[test]
     fn app_history_to_json_roundtrip() {
         let mut history = AppZoneHistory::new();
-        history.set_app_last_zones(
-            "app.exe",
-            AppZoneEntry {
-                layout_id: "lid".into(),
-                device_key: "dk".into(),
-                zone_index_set: vec![2],
-            },
-        );
+        history.record("app.exe", "dk", "lid", vec![2]);
         let json = history.to_json();
         let arr = json
             .get("app-zone-history")
@@ -643,8 +514,8 @@ mod tests {
             ]
         });
         let history = AppZoneHistory::load_from_json(&json);
-        let zones = history.get_app_last_zones("test.exe", "D1", "L1");
+        let zones = history.lookup("test.exe", "D1");
         assert!(zones.is_some());
-        assert_eq!(zones.unwrap(), &vec![0, 1, 2]);
+        assert_eq!(zones.unwrap(), vec![0, 1, 2]);
     }
 }

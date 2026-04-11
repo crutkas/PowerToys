@@ -1,6 +1,6 @@
 # PowerToys Rust Port — TODO
 
-*Last updated: 2026-04-11 17:12 UTC*
+*Last updated: 2026-04-11 17:20 UTC*
 
 ## 🔴 Bug Tracker (test-first methodology)
 
@@ -16,14 +16,14 @@ Every fix follows: read C++ → write failing test → implement fix → test pa
 |----|-----------|-----|-------------|---------------|--------|
 | `fz-overlay-d2d` | FancyZones | GDI overlay, no zone numbers | D2D + DirectWrite (GPU, anti-aliased, zone numbers) | ✅ D2D + DirectWrite | ✅ fixed |
 | `fz-window-filter` | FancyZones | No window filtering | Skips minimized/tool/invisible/child/excluded/elevated | ✅ Filters matching C++ | ✅ fixed |
-| `aot-virtual-desktop` | AlwaysOnTop | No virtual desktop tracking | Hides borders on other desktops | Borders show everywhere | 🔧 in progress |
+| `aot-virtual-desktop` | AlwaysOnTop | No virtual desktop tracking | Hides borders on other desktops | Registry query + stub | 🟡 partial |
 | `ws-snapshot-fields` | Workspaces | Missing fields in snapshot | Captures packageFullName, appUserModelId, pwaAppId, isElevated | ✅ Captures elevation + package | ✅ fixed |
 
 ### MEDIUM
 | ID | Component | Bug | Status |
 |----|-----------|-----|--------|
 | `aot-sound` | AlwaysOnTop | No sound on pin/unpin (PlaySoundW) | ✅ fixed |
-| `aot-file-watcher` | AlwaysOnTop | Settings don't auto-reload on file change | open |
+| `aot-file-watcher` | AlwaysOnTop | Settings don't auto-reload on file change | ✅ fixed |
 | `aot-system-menu` | AlwaysOnTop | No "Pin/Unpin" in title bar context menu | open |
 | `aot-game-mode` | AlwaysOnTop | Pins windows in full-screen games | ✅ fixed |
 | `aot-excluded-apps` | AlwaysOnTop | No exclusion list for apps | ✅ fixed |

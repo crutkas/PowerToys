@@ -1,5 +1,6 @@
 //! FancyZones Engine - core runtime.
 
+pub mod app_history;
 pub mod work_area;
 pub mod drag_handler;
 pub mod snap;

@@ -10,6 +10,7 @@ use fancyzones_core::zone::ZoneIndexSet;
 use windows_sys::Win32::Foundation::HWND;
 use windows_sys::Win32::UI::Input::KeyboardAndMouse::GetAsyncKeyState;
 
+use crate::app_history::AppZoneHistory;
 use crate::drag_handler::DragState;
 use crate::snap::{self, direction_from_vk, KeyboardSnapHandler, LoadedData};
 use crate::work_area::WorkArea;
@@ -17,12 +18,21 @@ use crate::work_area::WorkArea;
 /// WinEvent hook handle (= `*mut c_void`).
 type WinEventHook = *mut core::ffi::c_void;
 
+/// Information returned after a successful snap, for app zone history recording.
+pub struct SnapInfo {
+    pub rect: Rect,
+    pub device_key: String,
+    pub layout_id: String,
+    pub zones: ZoneIndexSet,
+}
+
 pub struct FancyZonesEngine {
     work_areas: Vec<WorkArea>,
     settings: Settings,
     loaded_data: LoadedData,
     active_drag: Option<DragState>,
     keyboard_handler: KeyboardSnapHandler,
+    app_history: AppZoneHistory,
     event_hook: WinEventHook,
 }
 
@@ -30,7 +40,14 @@ impl FancyZonesEngine {
     /// Load settings from disk and initialize.
     pub fn init() -> Self {
         let data = snap::load_all();
-        Self::new_with_data(data)
+        let app_history = if let Some(dir) = snap::data_dir() {
+            AppZoneHistory::load(&dir.join("app-zone-history.json"))
+        } else {
+            AppZoneHistory::new()
+        };
+        let mut engine = Self::new_with_data(data);
+        engine.app_history = app_history;
+        engine
     }
 
     /// Initialize with pre-loaded data (useful for testing).
@@ -41,6 +58,7 @@ impl FancyZonesEngine {
             loaded_data: data,
             active_drag: None,
             keyboard_handler: KeyboardSnapHandler::new(),
+            app_history: AppZoneHistory::new(),
             event_hook: ptr::null_mut(),
         }
     }
@@ -113,21 +131,27 @@ impl FancyZonesEngine {
     }
 
     /// End drag and return the snap target rect if any.
-    pub fn on_move_size_end(&mut self) -> Option<Rect> {
+    /// Also returns (work_area_idx, zone_indices) so the caller can record history.
+    pub fn on_move_size_end(&mut self) -> Option<SnapInfo> {
         let drag = self.active_drag.take()?;
         let (wa_idx, zone_idx) = drag.snap_target_info(&self.work_areas)?;
-        let rect = self.work_areas.get(wa_idx)?.get_zone_rect(&vec![zone_idx as i64]);
+        let zones = vec![zone_idx as i64];
+        let rect = self.work_areas.get(wa_idx)?.get_zone_rect(&zones);
 
         // Record which zone this window is in so keyboard snap knows
         if let Some(wa) = self.work_areas.get_mut(wa_idx) {
-            wa.assign_window(drag.hwnd, vec![zone_idx as i64]);
+            wa.assign_window(drag.hwnd, zones.clone());
         }
 
-        Some(rect)
+        let device_key = self.work_areas.get(wa_idx)?.device_key().to_string();
+        let layout_id = self.work_areas.get(wa_idx)?.layout_id().to_string();
+
+        Some(SnapInfo { rect, device_key, layout_id, zones })
     }
 
     /// Handle a keyboard snap hotkey (Win+Arrow).
-    pub fn on_snap_hotkey(&mut self, hwnd: HWND, vk_code: u32) -> Option<Rect> {
+    /// Returns snap info including rect and metadata for history recording.
+    pub fn on_snap_hotkey(&mut self, hwnd: HWND, vk_code: u32) -> Option<SnapInfo> {
         let direction = direction_from_vk(vk_code)?;
         let (wa_idx, current_zones) = self.find_window_work_area(hwnd as u64)?;
 
@@ -146,10 +170,13 @@ impl FancyZonesEngine {
         }?;
 
         if let Some(wa) = self.work_areas.get_mut(result.work_area_idx) {
-            wa.assign_window(hwnd as u64, result.zones);
+            wa.assign_window(hwnd as u64, result.zones.clone());
         }
 
-        Some(result.rect)
+        let device_key = self.work_areas.get(result.work_area_idx)?.device_key().to_string();
+        let layout_id = self.work_areas.get(result.work_area_idx)?.layout_id().to_string();
+
+        Some(SnapInfo { rect: result.rect, device_key, layout_id, zones: result.zones })
     }
 
     /// Set work areas directly (for testing).
@@ -176,8 +203,37 @@ impl FancyZonesEngine {
         Some((wa_idx, &drag.highlighted_zones))
     }
 
-    /// Shut down and clean up.
+    /// Record an app's zone assignment in the history.
+    pub fn record_app_history(
+        &mut self,
+        app_path: &str,
+        device_key: &str,
+        layout_id: &str,
+        zones: ZoneIndexSet,
+    ) {
+        self.app_history.record(app_path, device_key, layout_id, zones);
+    }
+
+    /// Look up remembered zones for an app on a given device.
+    pub fn lookup_app_history(&self, app_path: &str, device_key: &str) -> Option<Vec<i64>> {
+        self.app_history.lookup(app_path, device_key)
+    }
+
+    /// Save app zone history to the standard data directory.
+    pub fn save_app_history(&self) {
+        if let Some(dir) = snap::data_dir() {
+            let _ = self.app_history.save(&dir.join("app-zone-history.json"));
+        }
+    }
+
+    /// Get mutable access to the app history (for direct manipulation).
+    pub fn app_history_mut(&mut self) -> &mut AppZoneHistory {
+        &mut self.app_history
+    }
+
+    /// Shut down and clean up. Saves app zone history to disk.
     pub fn shutdown(&mut self) {
+        self.save_app_history();
         self.active_drag = None;
         self.work_areas.clear();
         if !self.event_hook.is_null() {

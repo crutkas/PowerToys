@@ -76,8 +76,14 @@ pub fn is_window_processable(hwnd: HWND, excluded_apps: &[String], allow_child_w
     }
 }
 
-/// Get the executable name for a window's process.
-fn get_exe_name(hwnd: HWND) -> Option<String> {
+/// Get the executable name (filename only) for a window's process.
+pub fn get_exe_name(hwnd: HWND) -> Option<String> {
+    let path = get_exe_path(hwnd)?;
+    path.rsplit('\\').next().map(|s| s.to_string())
+}
+
+/// Get the full executable path for a window's process.
+pub fn get_exe_path(hwnd: HWND) -> Option<String> {
     unsafe {
         let mut pid: u32 = 0;
         GetWindowThreadProcessId(hwnd, &mut pid);
@@ -96,8 +102,7 @@ fn get_exe_name(hwnd: HWND) -> Option<String> {
         windows_sys::Win32::Foundation::CloseHandle(handle);
 
         if ok == 0 { return None; }
-        let path = String::from_utf16_lossy(&buf[..size as usize]);
-        path.rsplit('\\').next().map(|s| s.to_string())
+        Some(String::from_utf16_lossy(&buf[..size as usize]))
     }
 }
 

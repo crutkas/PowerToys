@@ -8,6 +8,7 @@ use fancyzones_engine::overlay::{OverlayColors, ZoneOverlay};
 use fancyzones_engine::snap::win32;
 
 use windows_sys::Win32::Foundation::HWND;
+use windows_sys::Win32::System::Threading::GetCurrentThreadId;
 use windows_sys::Win32::UI::WindowsAndMessaging::*;
 
 use crate::hooks::{self, WinEventHookGuard, KeyboardHookGuard, WM_FZ_SNAP_HOTKEY};
@@ -15,6 +16,8 @@ use crate::hooks::{self, WinEventHookGuard, KeyboardHookGuard, WM_FZ_SNAP_HOTKEY
 /// Custom window messages posted by the WinEvent callback.
 pub const WM_FZ_MOVESIZE_START: u32 = WM_APP + 1;
 pub const WM_FZ_MOVESIZE_END: u32 = WM_APP + 2;
+/// Custom message posted when display configuration changes.
+pub const WM_FZ_DISPLAY_CHANGE: u32 = WM_APP + 4;
 
 /// Timer ID for mouse-position polling during drag.
 const DRAG_TIMER_ID: usize = 1;
@@ -87,6 +90,7 @@ impl FancyZonesApp {
                     WM_FZ_MOVESIZE_START => self.on_move_size_start(msg.wParam as HWND),
                     WM_FZ_MOVESIZE_END => self.on_move_size_end(),
                     WM_FZ_SNAP_HOTKEY => self.on_snap_hotkey(msg.lParam as u32),
+                    WM_FZ_DISPLAY_CHANGE => self.on_display_change(),
                     WM_TIMER if msg.wParam == DRAG_TIMER_ID => self.on_drag_timer(),
                     _ => {
                         TranslateMessage(&msg);
@@ -108,6 +112,13 @@ impl FancyZonesApp {
             unsafe { DestroyWindow(self.msg_hwnd); }
             self.msg_hwnd = ptr::null_mut();
         }
+    }
+
+    // ---- Display change --------------------------------------------------
+
+    fn on_display_change(&mut self) {
+        self.hide_overlays();
+        self.engine.update_work_areas();
     }
 
     // ---- Drag lifecycle --------------------------------------------------
@@ -268,5 +279,19 @@ unsafe extern "system" fn msg_wnd_proc(
     wparam: usize,
     lparam: isize,
 ) -> isize {
-    unsafe { DefWindowProcW(hwnd, msg, wparam, lparam) }
+    match msg {
+        WM_DISPLAYCHANGE => {
+            unsafe {
+                PostThreadMessageW(GetCurrentThreadId(), WM_FZ_DISPLAY_CHANGE, 0, 0);
+            }
+            0
+        }
+        WM_SETTINGCHANGE if wparam == SPI_SETWORKAREA as usize => {
+            unsafe {
+                PostThreadMessageW(GetCurrentThreadId(), WM_FZ_DISPLAY_CHANGE, 0, 0);
+            }
+            0
+        }
+        _ => unsafe { DefWindowProcW(hwnd, msg, wparam, lparam) },
+    }
 }
