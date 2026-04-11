@@ -13,7 +13,7 @@
 ## 🟡 Needs Verification
 
 - [ ] **Installer end-to-end** — install Rust-built MSI → launch PowerToys → all modules load
-- [ ] **ShortcutGuide behavior** — deployed Rust DLL with Win key tracking. Verify: hold Win 900ms = guide, quick tap = no trigger
+- [x] **ShortcutGuide behavior** — ✅ Confirmed: hold Win 900ms = guide appears, quick tap = no trigger
 - [ ] **Workspaces EXEs live test** — deploy snapshot/launcher/arranger, verify capture → launch → arrange cycle
 - [ ] **FancyZones engine integration** — wire engine crate into module DLL, verify drag → snap flow
 
