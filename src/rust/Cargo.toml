@@ -17,6 +17,7 @@ members = [
     "modules/shortcutguide-module-interface",
     "modules/workspaces-module-interface",
     "modules/zoomit-module-interface",
+    "modules/measuretool-module-interface",
     "apps/alwaysontop",
     "apps/awake",
     "apps/actionrunner",
@@ -25,11 +26,16 @@ members = [
     "apps/workspaces-launcher",
     "apps/workspaces-arranger",
     "apps/fancyzones",
+    "apps/measuretool",
     "tests/integration",
     "libs/powertoys-win32",
     "libs/fancyzones-core",
     "libs/workspaces-core",
     "libs/fancyzones-engine",
+    "libs/highlighter-core",
+    "libs/cursorwrap-core",
+    "libs/measuretool-core",
+    "modules/cursorwrap-module-interface",
 ]
 
 # Release profile: optimize for performance with LTO

@@ -252,6 +252,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "cursorwrap-core"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "cursorwrap-module-interface"
+version = "0.1.0"
+dependencies = [
+ "cc",
+ "cursorwrap-core",
+ "powertoys-module-ffi",
+ "serde",
+ "serde_json",
+ "windows-sys 0.59.0",
+]
+
+[[package]]
 name = "difflib"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -283,6 +303,7 @@ dependencies = [
  "powertoys-win32",
  "serde",
  "serde_json",
+ "windows",
  "windows-sys 0.59.0",
 ]
 
@@ -395,6 +416,34 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5e5032e24019045c762d3c0f28f5b6b8bbf38563a65908389bf7978758920897"
 
 [[package]]
+name = "measuretool"
+version = "0.1.0"
+dependencies = [
+ "measuretool-core",
+ "windows-sys 0.59.0",
+]
+
+[[package]]
+name = "measuretool-core"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "measuretool-module-interface"
+version = "0.1.0"
+dependencies = [
+ "cc",
+ "measuretool-core",
+ "powertoys-module-ffi",
+ "serde",
+ "serde_json",
+ "windows-sys 0.59.0",
+]
+
+[[package]]
 name = "memchr"
 version = "2.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -497,6 +546,18 @@ version = "0.1.0"
 dependencies = [
  "powertoys-win32",
  "serde",
+ "serde_json",
+ "windows",
+ "windows-sys 0.59.0",
+]
+
+[[package]]
+name = "powertoys-fancyzones"
+version = "0.1.0"
+dependencies = [
+ "fancyzones-core",
+ "fancyzones-engine",
+ "powertoys-win32",
  "serde_json",
  "windows-sys 0.59.0",
 ]
@@ -732,6 +793,7 @@ version = "0.1.0"
 dependencies = [
  "cc",
  "powertoys-module-ffi",
+ "powertoys-win32",
  "serde_json",
  "windows-sys 0.59.0",
 ]
@@ -890,10 +952,74 @@ dependencies = [
 ]
 
 [[package]]
+name = "windows"
+version = "0.58.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "dd04d41d93c4992d421894c18c8b43496aa748dd4c081bac0dc93eb0489272b6"
+dependencies = [
+ "windows-core",
+ "windows-targets",
+]
+
+[[package]]
+name = "windows-core"
+version = "0.58.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6ba6d44ec8c2591c134257ce647b7ea6b20335bf6379a27dac5f1641fcf59f99"
+dependencies = [
+ "windows-implement",
+ "windows-interface",
+ "windows-result",
+ "windows-strings",
+ "windows-targets",
+]
+
+[[package]]
+name = "windows-implement"
+version = "0.58.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2bbd5b46c938e506ecbce286b6628a02171d56153ba733b6c741fc627ec9579b"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
+name = "windows-interface"
+version = "0.58.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "053c4c462dc91d3b1504c6fe5a726dd15e216ba718e84a0e46a88fbe5ded3515"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "windows-link"
 version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f0805222e57f7521d6a62e36fa9163bc891acd422f971defe97d64e70d0a4fe5"
+
+[[package]]
+name = "windows-result"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1d1043d8214f791817bab27572aaa8af63732e11bf84aa21a45a78d6c317ae0e"
+dependencies = [
+ "windows-targets",
+]
+
+[[package]]
+name = "windows-strings"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4cd9b125c486025df0eabcb585e62173c6c9eddcec5d117d3b6e8c30e2ee4d10"
+dependencies = [
+ "windows-result",
+ "windows-targets",
+]
 
 [[package]]
 name = "windows-sys"
@@ -987,11 +1113,33 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "589f6da84c646204747d1270a2a5661ea66ed1cced2631d546fdfb155959f9ec"
 
 [[package]]
+name = "workspaces-arranger"
+version = "0.1.0"
+dependencies = [
+ "powertoys-win32",
+ "serde",
+ "serde_json",
+ "windows-sys 0.59.0",
+ "workspaces-core",
+]
+
+[[package]]
 name = "workspaces-core"
 version = "0.1.0"
 dependencies = [
  "serde",
  "serde_json",
+]
+
+[[package]]
+name = "workspaces-launcher"
+version = "0.1.0"
+dependencies = [
+ "powertoys-win32",
+ "serde",
+ "serde_json",
+ "windows-sys 0.59.0",
+ "workspaces-core",
 ]
 
 [[package]]
@@ -1002,6 +1150,17 @@ dependencies = [
  "powertoys-module-ffi",
  "serde_json",
  "windows-sys 0.59.0",
+]
+
+[[package]]
+name = "workspaces-snapshot"
+version = "0.1.0"
+dependencies = [
+ "powertoys-win32",
+ "serde",
+ "serde_json",
+ "windows-sys 0.59.0",
+ "workspaces-core",
 ]
 
 [[package]]
