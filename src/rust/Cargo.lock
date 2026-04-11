@@ -373,6 +373,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "filelocksmith-cli"
+version = "0.1.0"
+dependencies = [
+ "filelocksmith-core",
+ "serde_json",
+ "windows-sys 0.59.0",
+]
+
+[[package]]
+name = "filelocksmith-core"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "find-msvc-tools"
 version = "0.1.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -505,6 +522,14 @@ name = "libc"
 version = "0.2.184"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "48f5d2a454e16a5ea0f4ced81bd44e4cfc7bd3a507b61887c99fd3538b28e4af"
+
+[[package]]
+name = "lightswitch-core"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+]
 
 [[package]]
 name = "lightswitch-module-interface"
@@ -658,6 +683,22 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a89322df9ebe1c1578d689c92318e070967d1042b512afbe49518723f4e6d5cd"
 
 [[package]]
+name = "poweraccent-core"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "poweraccent-kbd"
+version = "0.1.0"
+dependencies = [
+ "poweraccent-core",
+ "windows-sys 0.59.0",
+]
+
+[[package]]
 name = "poweraccent-module-interface"
 version = "0.1.0"
 dependencies = [
@@ -728,6 +769,16 @@ name = "powertoys-integration-tests"
 version = "0.1.0"
 dependencies = [
  "powertoys-module-ffi",
+ "windows-sys 0.59.0",
+]
+
+[[package]]
+name = "powertoys-lightswitch"
+version = "0.1.0"
+dependencies = [
+ "lightswitch-core",
+ "serde",
+ "serde_json",
  "windows-sys 0.59.0",
 ]
 

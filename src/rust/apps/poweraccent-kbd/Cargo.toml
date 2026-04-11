@@ -4,7 +4,6 @@ version = "0.1.0"
 edition = "2024"
 description = "PowerAccent keyboard hook service - intercepts keys and sends accent characters"
 
-[workspace]
 
 [[bin]]
 name = "poweraccent-kbd"
