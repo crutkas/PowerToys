@@ -38,8 +38,7 @@ opt-level = 3          # maximum speed optimization
 lto = true             # link-time optimization — cross-crate inlining
 codegen-units = 1      # single codegen unit — slower compile, better optimization
 strip = "symbols"      # strip debug symbols from binary
-panic = "abort"        # no unwind tables — smaller binary, less overhead
-panic = "abort"        # no unwind tables — smaller binary, less RAM
+panic = "abort"        # no unwind tables — less overhead
 
 [workspace.dependencies]
 windows = { version = "0.58", features = [

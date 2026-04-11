@@ -321,6 +321,9 @@ fn render_zones_to_overlay(
             }
         }
 
+        // Draw zone numbers (centered in each zone)
+        draw_zone_numbers(buf, w, &wa.zone_rects_screen(), &wa_rect, colors);
+
         // UpdateLayeredWindow
         let mut pt_src = POINT { x: 0, y: 0 };
         let mut pt_dst = POINT { x: wa_rect.left, y: wa_rect.top };

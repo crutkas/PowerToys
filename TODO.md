@@ -1,28 +1,45 @@
 # PowerToys Rust Port — TODO
 
-*Last updated: 2026-04-11 16:06 UTC*
+*Last updated: 2026-04-11 16:15 UTC*
 
-## 🔴 Blocking / In Flight
+## 🔴 Bug Tracker (test-first methodology)
 
-- [ ] **Installer build** — MSBuild succeeds (296 projects + 23 Rust outputs), blocked by pre-existing DSC Schema Generator COM error (`0x80040154`). Not related to Rust changes.
-- [ ] **ARM64 CI** — Rust build hook triggers on ARM64 agent without `rustup`
-- [ ] **3 unported C++ module DLLs** — EnvironmentVariables, Hosts, MeasureTool (Screen Ruler)
+Every fix follows: read C++ → write failing test → implement fix → test passes → live verify.
 
-## 🟡 Known Issues
+### CRITICAL
+| ID | Component | Bug | C++ Behavior | Rust Behavior | Status |
+|----|-----------|-----|-------------|---------------|--------|
+| `update-version` | Update EXE | Version hardcoded | Reads from `version_gen.h` compile-time constants | Returns "0.0.1" always | ✅ fixed |
 
-- [ ] **FancyZones: app zone history** — windows don't remember their zones across sessions
-- [ ] **FancyZones: window filtering** — no filtering for system windows, tool windows, excluded apps
-- [ ] **FancyZones: display change** — zones not recalculated on monitor connect/disconnect
-- [ ] **FancyZones: editor integration** — can't launch editor or reload custom layouts
-- [ ] **FancyZones: virtual desktop** — no tracking of virtual desktop switches
-- [ ] **ShortcutGuide: custom shortcut** — Win+Shift+/ registered but needs live verification
-- [ ] **Workspaces EXEs** — not yet live-tested (capture → launch → arrange cycle)
-- [ ] **Installer end-to-end** — not yet tested
+### HIGH
+| ID | Component | Bug | C++ Behavior | Rust Behavior | Status |
+|----|-----------|-----|-------------|---------------|--------|
+| `fz-overlay-d2d` | FancyZones | GDI overlay, no zone numbers | D2D + DirectWrite (GPU, anti-aliased, zone numbers) | GDI pixel buffer (CPU, no text) | open |
+| `fz-window-filter` | FancyZones | No window filtering | Skips minimized/tool/invisible/child/excluded/elevated | Snaps everything | open |
+| `aot-virtual-desktop` | AlwaysOnTop | No virtual desktop tracking | Hides borders on other desktops | Borders show everywhere | open |
+| `ws-snapshot-fields` | Workspaces | Missing fields in snapshot | Captures packageFullName, appUserModelId, pwaAppId, isElevated | Sets all to empty/false | open |
+
+### MEDIUM
+| ID | Component | Bug | Status |
+|----|-----------|-----|--------|
+| `aot-sound` | AlwaysOnTop | No sound on pin/unpin (PlaySoundW) | open |
+| `aot-file-watcher` | AlwaysOnTop | Settings don't auto-reload on file change | open |
+| `aot-system-menu` | AlwaysOnTop | No "Pin/Unpin" in title bar context menu | open |
+| `aot-game-mode` | AlwaysOnTop | Pins windows in full-screen games | open |
+| `aot-excluded-apps` | AlwaysOnTop | No exclusion list for apps | open |
+| `fz-app-history` | FancyZones | Windows forget zones across sessions | open |
+| `fz-display-change` | FancyZones | Zones not recalculated on monitor change | open |
+| `fz-editor` | FancyZones | Can't launch editor or reload layouts | open |
+| `fz-virtual-desktop` | FancyZones | No virtual desktop switch detection | open |
+| `update-progress` | Update EXE | No download progress (UI frozen) | open |
+| `ws-launcher-elevation` | Workspaces | Elevated apps fail without UAC retry | open |
+
+## 🟡 Infrastructure
+- [ ] **Installer build** — blocked by pre-existing DSC COM error
+- [ ] **ARM64 CI** — needs rustup on ARM64 agent  
+- [ ] **3 unported module DLLs** — EnvironmentVariables, Hosts, MeasureTool
 
 ## 🟢 Shipped & Working
-
-### Phase 1+2 — Module DLLs + Core EXEs
-- [x] FFI bridge (`PowerToyModule` trait + C++ vtable adapter + `on_hotkey_ex`/`get_hotkey_ex`)
 - [x] All 15 module interface DLLs (vtable mismatch fixed across all 14 adapters)
 - [x] Awake: DLL + EXE (crutkas/awake submodule)
 - [x] AlwaysOnTop: DLL (Rust) + EXE (Rust with D2D borders, GPU-accelerated)
