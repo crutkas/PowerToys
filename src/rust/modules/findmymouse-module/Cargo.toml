@@ -1,0 +1,28 @@
+[package]
+name = "findmymouse-module"
+version = "0.1.0"
+edition = "2024"
+description = "FindMyMouse module interface for PowerToys - Rust implementation"
+
+[workspace]
+
+[lib]
+crate-type = ["cdylib", "staticlib"]
+
+[dependencies]
+powertoys-module-ffi = { path = "../../powertoys-module-ffi" }
+findmymouse-core = { path = "../../libs/findmymouse-core" }
+windows-sys = { version = "0.59", features = [
+    "Win32_Foundation",
+    "Win32_System_LibraryLoader",
+    "Win32_System_Threading",
+    "Win32_Security",
+    "Win32_System_Power",
+    "Win32_System_Registry",
+    "Win32_UI_Shell",
+    "Win32_UI_WindowsAndMessaging",
+] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+[dev-dependencies]
