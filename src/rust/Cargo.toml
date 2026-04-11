@@ -37,6 +37,7 @@ members = [
     "modules/highlighter-module-interface",
     "libs/highlighter-core",
     "libs/crosshairs-core",
+    "libs/runner-core",
     "libs/findmymouse-core",
     "libs/cursorwrap-core",
     "libs/measuretool-core",
