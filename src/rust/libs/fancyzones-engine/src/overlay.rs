@@ -194,10 +194,11 @@ impl ZoneOverlay {
                 }
 
                 // Zone number
-                if let (Some(ref tf), Some(ref nb)) = (&self.text_format, &border_brush) {
+                if let (Some(tf), Some(nb)) = (&self.text_format, &border_brush) {
                     let num = format!("{}", i + 1);
                     let wide: Vec<u16> = num.encode_utf16().collect();
-                    rt.DrawTextW(&wide, tf, &d2d_rect, nb, D2D1_DRAW_TEXT_OPTIONS_NONE, DWRITE_MEASURING_MODE_NATURAL);
+                    let rt_base: &ID2D1RenderTarget = rt;
+                    rt_base.DrawText(&wide, tf, &d2d_rect, nb, D2D1_DRAW_TEXT_OPTIONS_NONE, DWRITE_MEASURING_MODE_NATURAL);
                 }
             }
 
@@ -226,10 +227,6 @@ impl Drop for ZoneOverlay {
 unsafe extern "system" fn overlay_wnd_proc(hwnd: HWND, msg: u32, wparam: usize, lparam: isize) -> isize {
     unsafe { DefWindowProcW(hwnd, msg, wparam, lparam) }
 }
-
-pub fn create_zone_pixel_buffer(
-    _width: u32, _height: u32, _fill: (u8,u8,u8), _border: (u8,u8,u8), _alpha: u8, _border_width: u32,
-) -> Vec<u8> { vec![] } // Legacy stub — D2D used now
 
 #[cfg(test)]
 mod tests {
