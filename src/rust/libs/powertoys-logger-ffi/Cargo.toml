@@ -6,7 +6,6 @@ edition = "2024"
 [lib]
 crate-type = ["cdylib", "rlib"]
 
-[workspace]
 
 [dependencies]
 tracing = "0.1"

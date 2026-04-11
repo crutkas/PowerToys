@@ -705,13 +705,13 @@ namespace FancyZonesUnitTests
         // data.rs: monitor_handle_same — same handle, different device/serial
         TEST_METHOD(MonitorHandleSame)
         {
-            HMONITOR mon = Mocks::Monitor();
-            WorkAreaId id1 = {
-                .monitorId = { .monitor = mon, .deviceId = { .id = L"device-1", .instanceId = L"instance-id-1", .number = 0 }, .serialNumber = L"serial-1" },
+            auto mon = Mocks::Monitor();
+            WorkAreaId id1{
+                .monitorId = { .monitor = mon, .deviceId = { .id = L"device-1", .instanceId = L"instance-id-1" }, .serialNumber = L"serial-1" },
                 .virtualDesktopId = FancyZonesUtils::GuidFromString(L"{E21F6F29-76FD-4FC1-8970-17AB8AD64847}").value()
             };
-            WorkAreaId id2 = {
-                .monitorId = { .monitor = mon, .deviceId = { .id = L"device-2", .instanceId = L"instance-id-2", .number = 0 }, .serialNumber = L"serial-2" },
+            WorkAreaId id2{
+                .monitorId = { .monitor = mon, .deviceId = { .id = L"device-2", .instanceId = L"instance-id-2" }, .serialNumber = L"serial-2" },
                 .virtualDesktopId = FancyZonesUtils::GuidFromString(L"{E21F6F29-76FD-4FC1-8970-17AB8AD64847}").value()
             };
             Assert::IsTrue(id1 == id2, L"Same monitor handle should match");
@@ -720,12 +720,12 @@ namespace FancyZonesUnitTests
         // data.rs: monitor_handle_different
         TEST_METHOD(MonitorHandleDifferent)
         {
-            WorkAreaId id1 = {
-                .monitorId = { .monitor = Mocks::Monitor(), .deviceId = { .id = L"device", .instanceId = L"instance-id", .number = 0 }, .serialNumber = L"serial" },
+            WorkAreaId id1{
+                .monitorId = { .monitor = Mocks::Monitor(), .deviceId = { .id = L"device", .instanceId = L"instance-id" }, .serialNumber = L"serial" },
                 .virtualDesktopId = FancyZonesUtils::GuidFromString(L"{E21F6F29-76FD-4FC1-8970-17AB8AD64847}").value()
             };
-            WorkAreaId id2 = {
-                .monitorId = { .monitor = Mocks::Monitor(), .deviceId = { .id = L"device", .instanceId = L"instance-id", .number = 0 }, .serialNumber = L"serial" },
+            WorkAreaId id2{
+                .monitorId = { .monitor = Mocks::Monitor(), .deviceId = { .id = L"device", .instanceId = L"instance-id" }, .serialNumber = L"serial" },
                 .virtualDesktopId = FancyZonesUtils::GuidFromString(L"{E21F6F29-76FD-4FC1-8970-17AB8AD64847}").value()
             };
             Assert::IsFalse(id1 == id2, L"Different monitor handles should not match");
@@ -734,12 +734,12 @@ namespace FancyZonesUnitTests
         // data.rs: virtual_desktop_different
         TEST_METHOD(VirtualDesktopDifferent)
         {
-            WorkAreaId id1 = {
-                .monitorId = { .monitor = nullptr, .deviceId = { .id = L"device", .instanceId = L"instance-id", .number = 0 }, .serialNumber = L"serial" },
+            WorkAreaId id1{
+                .monitorId = { .deviceId = { .id = L"device", .instanceId = L"instance-id" }, .serialNumber = L"serial" },
                 .virtualDesktopId = FancyZonesUtils::GuidFromString(L"{F21F6F29-76FD-4FC1-8970-17AB8AD64847}").value()
             };
-            WorkAreaId id2 = {
-                .monitorId = { .monitor = nullptr, .deviceId = { .id = L"device", .instanceId = L"instance-id", .number = 0 }, .serialNumber = L"serial" },
+            WorkAreaId id2{
+                .monitorId = { .deviceId = { .id = L"device", .instanceId = L"instance-id" }, .serialNumber = L"serial" },
                 .virtualDesktopId = FancyZonesUtils::GuidFromString(L"{E21F6F29-76FD-4FC1-8970-17AB8AD64847}").value()
             };
             Assert::IsFalse(id1 == id2, L"Different virtual desktop IDs should not match");
@@ -748,12 +748,12 @@ namespace FancyZonesUnitTests
         // data.rs: different_serial_number
         TEST_METHOD(DifferentSerialNumber)
         {
-            WorkAreaId id1 = {
-                .monitorId = { .monitor = nullptr, .deviceId = { .id = L"device", .instanceId = L"instance-id", .number = 0 }, .serialNumber = L"serial-number" },
+            WorkAreaId id1{
+                .monitorId = { .deviceId = { .id = L"device", .instanceId = L"instance-id" }, .serialNumber = L"serial-number" },
                 .virtualDesktopId = FancyZonesUtils::GuidFromString(L"{E21F6F29-76FD-4FC1-8970-17AB8AD64847}").value()
             };
-            WorkAreaId id2 = {
-                .monitorId = { .monitor = nullptr, .deviceId = { .id = L"device", .instanceId = L"instance-id", .number = 0 }, .serialNumber = L"another-serial-number" },
+            WorkAreaId id2{
+                .monitorId = { .deviceId = { .id = L"device", .instanceId = L"instance-id" }, .serialNumber = L"another-serial-number" },
                 .virtualDesktopId = FancyZonesUtils::GuidFromString(L"{E21F6F29-76FD-4FC1-8970-17AB8AD64847}").value()
             };
             Assert::IsFalse(id1 == id2, L"Different serial numbers should not match");
@@ -762,12 +762,12 @@ namespace FancyZonesUnitTests
         // data.rs: default_monitor_id_different_instance_id_same_number
         TEST_METHOD(DefaultMonitorDifferentInstanceSameNumber)
         {
-            WorkAreaId id1 = {
-                .monitorId = { .monitor = nullptr, .deviceId = { .id = L"Default_Monitor", .instanceId = L"instance-id", .number = 1 }, .serialNumber = L"" },
+            WorkAreaId id1{
+                .monitorId = { .deviceId = { .id = L"Default_Monitor", .instanceId = L"instance-id", .number = 1 } },
                 .virtualDesktopId = FancyZonesUtils::GuidFromString(L"{E21F6F29-76FD-4FC1-8970-17AB8AD64847}").value()
             };
-            WorkAreaId id2 = {
-                .monitorId = { .monitor = nullptr, .deviceId = { .id = L"Default_Monitor", .instanceId = L"another-instance-id", .number = 1 }, .serialNumber = L"" },
+            WorkAreaId id2{
+                .monitorId = { .deviceId = { .id = L"Default_Monitor", .instanceId = L"another-instance-id", .number = 1 } },
                 .virtualDesktopId = FancyZonesUtils::GuidFromString(L"{E21F6F29-76FD-4FC1-8970-17AB8AD64847}").value()
             };
             Assert::IsTrue(id1 == id2, L"Same number with different instance ID should match for Default_Monitor");
@@ -776,12 +776,12 @@ namespace FancyZonesUnitTests
         // data.rs: default_monitor_id_different_instance_id_different_number
         TEST_METHOD(DefaultMonitorDifferentInstanceDifferentNumber)
         {
-            WorkAreaId id1 = {
-                .monitorId = { .monitor = nullptr, .deviceId = { .id = L"Default_Monitor", .instanceId = L"instance-id", .number = 1 }, .serialNumber = L"" },
+            WorkAreaId id1{
+                .monitorId = { .deviceId = { .id = L"Default_Monitor", .instanceId = L"instance-id", .number = 1 } },
                 .virtualDesktopId = FancyZonesUtils::GuidFromString(L"{E21F6F29-76FD-4FC1-8970-17AB8AD64847}").value()
             };
-            WorkAreaId id2 = {
-                .monitorId = { .monitor = nullptr, .deviceId = { .id = L"Default_Monitor", .instanceId = L"another-instance-id", .number = 2 }, .serialNumber = L"" },
+            WorkAreaId id2{
+                .monitorId = { .deviceId = { .id = L"Default_Monitor", .instanceId = L"another-instance-id", .number = 2 } },
                 .virtualDesktopId = FancyZonesUtils::GuidFromString(L"{E21F6F29-76FD-4FC1-8970-17AB8AD64847}").value()
             };
             Assert::IsFalse(id1 == id2);
@@ -790,12 +790,12 @@ namespace FancyZonesUnitTests
         // data.rs: monitor_reconnect — same device, different UID suffix
         TEST_METHOD(MonitorReconnect)
         {
-            WorkAreaId id1 = {
-                .monitorId = { .monitor = nullptr, .deviceId = { .id = L"device", .instanceId = L"4&125707d6&0&UID1", .number = 1 }, .serialNumber = L"serial-number" },
+            WorkAreaId id1{
+                .monitorId = { .deviceId = { .id = L"device", .instanceId = L"4&125707d6&0&UID1", .number = 1 }, .serialNumber = L"serial-number" },
                 .virtualDesktopId = FancyZonesUtils::GuidFromString(L"{E21F6F29-76FD-4FC1-8970-17AB8AD64847}").value()
             };
-            WorkAreaId id2 = {
-                .monitorId = { .monitor = nullptr, .deviceId = { .id = L"device", .instanceId = L"4&125707d6&0&UID2", .number = 1 }, .serialNumber = L"serial-number" },
+            WorkAreaId id2{
+                .monitorId = { .deviceId = { .id = L"device", .instanceId = L"4&125707d6&0&UID2", .number = 1 }, .serialNumber = L"serial-number" },
                 .virtualDesktopId = FancyZonesUtils::GuidFromString(L"{E21F6F29-76FD-4FC1-8970-17AB8AD64847}").value()
             };
             Assert::IsTrue(id1 == id2, L"Monitor reconnect with same number should match");
@@ -804,12 +804,12 @@ namespace FancyZonesUnitTests
         // data.rs: same_monitor_models — same device, different UID, different numbers
         TEST_METHOD(SameMonitorModels)
         {
-            WorkAreaId id1 = {
-                .monitorId = { .monitor = nullptr, .deviceId = { .id = L"device", .instanceId = L"4&125707d6&0&UID1", .number = 1 }, .serialNumber = L"serial-number" },
+            WorkAreaId id1{
+                .monitorId = { .deviceId = { .id = L"device", .instanceId = L"4&125707d6&0&UID1", .number = 1 }, .serialNumber = L"serial-number" },
                 .virtualDesktopId = FancyZonesUtils::GuidFromString(L"{E21F6F29-76FD-4FC1-8970-17AB8AD64847}").value()
             };
-            WorkAreaId id2 = {
-                .monitorId = { .monitor = nullptr, .deviceId = { .id = L"device", .instanceId = L"4&125707d6&0&UID2", .number = 2 }, .serialNumber = L"serial-number" },
+            WorkAreaId id2{
+                .monitorId = { .deviceId = { .id = L"device", .instanceId = L"4&125707d6&0&UID2", .number = 2 }, .serialNumber = L"serial-number" },
                 .virtualDesktopId = FancyZonesUtils::GuidFromString(L"{E21F6F29-76FD-4FC1-8970-17AB8AD64847}").value()
             };
             Assert::IsFalse(id1 == id2, L"Same model different numbers should NOT match");
@@ -818,12 +818,12 @@ namespace FancyZonesUnitTests
         // data.rs: serial_number_not_found_error — one empty serial
         TEST_METHOD(SerialNumberNotFoundError)
         {
-            WorkAreaId id1 = {
-                .monitorId = { .monitor = nullptr, .deviceId = { .id = L"device", .instanceId = L"instance-id", .number = 1 }, .serialNumber = L"serial-number" },
+            WorkAreaId id1{
+                .monitorId = { .deviceId = { .id = L"device", .instanceId = L"instance-id", .number = 1 }, .serialNumber = L"serial-number" },
                 .virtualDesktopId = FancyZonesUtils::GuidFromString(L"{E21F6F29-76FD-4FC1-8970-17AB8AD64847}").value()
             };
-            WorkAreaId id2 = {
-                .monitorId = { .monitor = nullptr, .deviceId = { .id = L"device", .instanceId = L"instance-id", .number = 1 }, .serialNumber = L"" },
+            WorkAreaId id2{
+                .monitorId = { .deviceId = { .id = L"device", .instanceId = L"instance-id", .number = 1 }, .serialNumber = L"" },
                 .virtualDesktopId = FancyZonesUtils::GuidFromString(L"{E21F6F29-76FD-4FC1-8970-17AB8AD64847}").value()
             };
             // When one serial is empty, serial comparison is skipped → match on deviceId
@@ -833,12 +833,12 @@ namespace FancyZonesUnitTests
         // data.rs: different_id
         TEST_METHOD(DifferentDeviceId)
         {
-            WorkAreaId id1 = {
-                .monitorId = { .monitor = nullptr, .deviceId = { .id = L"device-1", .instanceId = L"instance-id", .number = 0 }, .serialNumber = L"" },
+            WorkAreaId id1{
+                .monitorId = { .deviceId = { .id = L"device-1", .instanceId = L"instance-id" } },
                 .virtualDesktopId = FancyZonesUtils::GuidFromString(L"{E21F6F29-76FD-4FC1-8970-17AB8AD64847}").value()
             };
-            WorkAreaId id2 = {
-                .monitorId = { .monitor = nullptr, .deviceId = { .id = L"device-2", .instanceId = L"instance-id", .number = 0 }, .serialNumber = L"" },
+            WorkAreaId id2{
+                .monitorId = { .deviceId = { .id = L"device-2", .instanceId = L"instance-id" } },
                 .virtualDesktopId = FancyZonesUtils::GuidFromString(L"{E21F6F29-76FD-4FC1-8970-17AB8AD64847}").value()
             };
             Assert::IsFalse(id1 == id2);
@@ -847,12 +847,12 @@ namespace FancyZonesUnitTests
         // data.rs: same_id_different_serial_numbers
         TEST_METHOD(SameIdDifferentSerialNumbers)
         {
-            WorkAreaId id1 = {
-                .monitorId = { .monitor = nullptr, .deviceId = { .id = L"device-1", .instanceId = L"instance-id-1", .number = 0 }, .serialNumber = L"serial-number-1" },
+            WorkAreaId id1{
+                .monitorId = { .deviceId = { .id = L"device-1", .instanceId = L"instance-id-1" }, .serialNumber = L"serial-number-1" },
                 .virtualDesktopId = FancyZonesUtils::GuidFromString(L"{E21F6F29-76FD-4FC1-8970-17AB8AD64847}").value()
             };
-            WorkAreaId id2 = {
-                .monitorId = { .monitor = nullptr, .deviceId = { .id = L"device-1", .instanceId = L"instance-id-2", .number = 0 }, .serialNumber = L"serial-number-2" },
+            WorkAreaId id2{
+                .monitorId = { .deviceId = { .id = L"device-1", .instanceId = L"instance-id-2" }, .serialNumber = L"serial-number-2" },
                 .virtualDesktopId = FancyZonesUtils::GuidFromString(L"{E21F6F29-76FD-4FC1-8970-17AB8AD64847}").value()
             };
             Assert::IsFalse(id1 == id2);
@@ -861,12 +861,12 @@ namespace FancyZonesUnitTests
         // data.rs: different_id_same_serial_numbers
         TEST_METHOD(DifferentIdSameSerialNumbers)
         {
-            WorkAreaId id1 = {
-                .monitorId = { .monitor = nullptr, .deviceId = { .id = L"device-1", .instanceId = L"instance-id-1", .number = 0 }, .serialNumber = L"serial-number-1" },
+            WorkAreaId id1{
+                .monitorId = { .deviceId = { .id = L"device-1", .instanceId = L"instance-id-1" }, .serialNumber = L"serial-number-1" },
                 .virtualDesktopId = FancyZonesUtils::GuidFromString(L"{E21F6F29-76FD-4FC1-8970-17AB8AD64847}").value()
             };
-            WorkAreaId id2 = {
-                .monitorId = { .monitor = nullptr, .deviceId = { .id = L"device-2", .instanceId = L"instance-id-2", .number = 0 }, .serialNumber = L"serial-number-1" },
+            WorkAreaId id2{
+                .monitorId = { .deviceId = { .id = L"device-2", .instanceId = L"instance-id-2" }, .serialNumber = L"serial-number-1" },
                 .virtualDesktopId = FancyZonesUtils::GuidFromString(L"{E21F6F29-76FD-4FC1-8970-17AB8AD64847}").value()
             };
             Assert::IsFalse(id1 == id2);

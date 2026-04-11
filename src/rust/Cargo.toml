@@ -39,6 +39,7 @@ members = [
     "libs/crosshairs-core",
     "libs/runner-core",
     "libs/powertoys-settings-ffi",
+    "libs/powertoys-logger-ffi",
     "libs/findmymouse-core",
     "libs/cursorwrap-core",
     "libs/measuretool-core",
