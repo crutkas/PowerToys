@@ -8,6 +8,7 @@ static MODULE_WIDE: std::sync::LazyLock<&'static [u16]> = std::sync::LazyLock::n
 
 pub struct Module {
     enabled: AtomicBool,
+    toggle_event: *mut std::ffi::c_void,
     process_handle: Option<*mut std::ffi::c_void>,
 
 }
@@ -17,6 +18,7 @@ impl Module {
     pub fn new() -> Self {
         Self {
             enabled: AtomicBool::new(false),
+            toggle_event: create_event("Local\\PowerToys-LightSwitch-ToggleEvent-d8dc2f29-8c94-4ca1-8c5f-3e2b1e3c4f5a"),
             process_handle: None,
 
         }
@@ -63,6 +65,16 @@ impl PowerToyModule for Module {
     }
     fn set_config(&mut self, _config: *const u16) {}
     fn destroy(&mut self) { self.disable(); }
+        fn get_hotkeys(&self, buffer: *mut Hotkey, buffer_size: usize) -> usize {
+        let hk = Hotkey { win: true, ctrl: false, shift: false, alt: true, key: b'T', id: 0, is_shown: true };
+        if !buffer.is_null() && buffer_size >= 1 { unsafe { *buffer = hk; } }
+        1
+    }
+    fn on_hotkey(&mut self, hotkey_id: usize) -> bool {
+        if !self.enabled.load(std::sync::atomic::Ordering::SeqCst) || hotkey_id != 0 { return false; }
+        unsafe { windows_sys::Win32::System::Threading::SetEvent(self.toggle_event); }
+        true
+    }
     fn gpo_policy_enabled_configuration(&self) -> GpoRuleConfigured {
         check_gpo("EnableLightSwitch")
     }

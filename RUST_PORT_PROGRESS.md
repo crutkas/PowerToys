@@ -55,7 +55,7 @@
 
 | Suite | Tests | Status |
 |-------|-------|--------|
-| Rust: FFI bridge + modules + integration | 113 | ✅ |
+| Rust: FFI bridge + modules + integration | 113 + hotkeys | ✅ |
 | Rust: awake binary (crutkas/awake) | 84 | ✅ |
 | C++: CommonLib + CommonUtils | 524 | ✅ |
 | .NET: ColorPicker | 378 | ✅ |

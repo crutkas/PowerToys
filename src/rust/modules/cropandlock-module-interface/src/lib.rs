@@ -10,6 +10,9 @@ pub struct Module {
     enabled: AtomicBool,
     process_handle: Option<*mut std::ffi::c_void>,
     terminate_event: *mut std::ffi::c_void,
+    reparent_event: *mut std::ffi::c_void,
+    thumbnail_event: *mut std::ffi::c_void,
+    screenshot_event: *mut std::ffi::c_void,
 }
 unsafe impl Send for Module {}
 
@@ -19,9 +22,19 @@ impl Module {
             enabled: AtomicBool::new(false),
             process_handle: None,
             terminate_event: create_event("Local\\PowerToysCropAndLockExitEvent-d995d409-7b70-482b-bad6-e7c8666f375a"),
+            reparent_event: create_event("Local\\PowerToysCropAndLockReparentEvent-6060860a-76a1-44e8-8d0e-63578885e9c36"),
+            thumbnail_event: create_event("Local\\PowerToysCropAndLockThumbnailEvent-1637be50-da72-46b2-9220-b32bb206b2434"),
+            screenshot_event: create_event("Local\\PowerToysCropAndLockScreenshotEvent-ff077ab2-8360-4bd1-864a-6337389d35593"),
         }
     }
 
+    
+    fn is_process_running(&self) -> bool {
+        match self.process_handle {
+            Some(h) => unsafe { windows_sys::Win32::System::Threading::WaitForSingleObject(h, 0) == 0x00000102 },
+            None => false,
+        }
+    }
     fn launch_process(&mut self) {
         use windows_sys::Win32::UI::Shell::*;
         use windows_sys::Win32::UI::WindowsAndMessaging::SW_SHOWNORMAL;
@@ -67,6 +80,30 @@ impl PowerToyModule for Module {
     }
     fn set_config(&mut self, _config: *const u16) {}
     fn destroy(&mut self) { self.disable(); }
+        fn get_hotkeys(&self, buffer: *mut Hotkey, buffer_size: usize) -> usize {
+        let hotkeys = [
+            Hotkey { win: true, ctrl: true, shift: true, alt: false, key: b'R', id: 0, is_shown: true },
+            Hotkey { win: true, ctrl: true, shift: true, alt: false, key: b'T', id: 1, is_shown: true },
+            Hotkey { win: true, ctrl: true, shift: true, alt: false, key: b'S', id: 2, is_shown: true },
+        ];
+        if !buffer.is_null() {
+            let count = buffer_size.min(3);
+            unsafe { std::ptr::copy_nonoverlapping(hotkeys.as_ptr(), buffer, count); }
+        }
+        3
+    }
+    fn on_hotkey(&mut self, hotkey_id: usize) -> bool {
+        if !self.enabled.load(std::sync::atomic::Ordering::SeqCst) { return false; }
+        if !self.is_process_running() { self.launch_process(); }
+        let event = match hotkey_id {
+            0 => self.reparent_event,
+            1 => self.thumbnail_event,
+            2 => self.screenshot_event,
+            _ => return false,
+        };
+        unsafe { windows_sys::Win32::System::Threading::SetEvent(event); }
+        true
+    }
     fn gpo_policy_enabled_configuration(&self) -> GpoRuleConfigured {
         check_gpo("EnableCropAndLock")
     }
