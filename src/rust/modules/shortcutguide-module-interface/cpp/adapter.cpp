@@ -36,6 +36,7 @@ struct RustModuleFunctionTable {
     bool (*is_enabled_by_default)(void* ctx);
     bool (*keep_track_of_pressed_win_key)(void* ctx);
     unsigned int (*milliseconds_win_key_must_be_pressed)(void* ctx);
+    void (*on_hotkey_ex)(void* ctx);
     powertoys_gpo::gpo_rule_configured_t (*gpo_policy_enabled_configuration)(void* ctx);
 };
 
@@ -132,6 +133,10 @@ public:
 
     unsigned int milliseconds_win_key_must_be_pressed() override {
         return m_table->milliseconds_win_key_must_be_pressed(m_table->context);
+    }
+
+    void OnHotkeyEx() override {
+        m_table->on_hotkey_ex(m_table->context);
     }
 
     powertoys_gpo::gpo_rule_configured_t gpo_policy_enabled_configuration() override {

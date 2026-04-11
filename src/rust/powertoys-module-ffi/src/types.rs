@@ -92,6 +92,7 @@ pub struct ModuleFunctionTable {
     pub is_enabled_by_default: unsafe extern "C" fn(*mut std::ffi::c_void) -> bool,
     pub keep_track_of_pressed_win_key: unsafe extern "C" fn(*mut std::ffi::c_void) -> bool,
     pub milliseconds_win_key_must_be_pressed: unsafe extern "C" fn(*mut std::ffi::c_void) -> u32,
+    pub on_hotkey_ex: unsafe extern "C" fn(*mut std::ffi::c_void),
     pub gpo_policy_enabled_configuration:
         unsafe extern "C" fn(*mut std::ffi::c_void) -> GpoRuleConfigured,
 }

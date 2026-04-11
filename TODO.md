@@ -4,16 +4,17 @@
 
 ## 🔴 Blocking / In Flight
 
-- [ ] **Installer build** — MSBuild succeeds (296 projects + 19 Rust outputs), blocked by pre-existing DSC Schema Generator COM error (`0x80040154`). Not related to Rust changes.
+- [ ] **Installer build** — MSBuild succeeds (296 projects + 22 Rust outputs), blocked by pre-existing DSC Schema Generator COM error (`0x80040154`). Not related to Rust changes.
 - [ ] **ARM64 CI failure** — Rust build hook triggers on ARM64 agent without `rustup`. Need to:
   - Add `rustup` install step to CI pipeline, OR
   - Skip Rust build on ARM64 until cross-compile is set up (`/p:SkipRustBuild=true`)
-- [ ] **Build script update** — Add 3 new Workspaces EXE name mappings to `Build-RustModules.ps1`
+- [ ] **ShortcutGuide fix** — was launching EXE on `enable()` instead of on long Win press. Fixed: added `on_hotkey_ex` to trait/vtable/adapter so runner's `AddPressedKeyAction` can toggle the EXE. Needs re-verify.
+- [ ] **3 unported C++ module DLLs** — EnvironmentVariables, Hosts, MeasureTool (Screen Ruler) still use C++ interface DLLs. Should port for completeness.
 
 ## 🟡 Needs Verification
 
 - [ ] **Installer end-to-end** — install Rust-built MSI → launch PowerToys → all modules load
-- [x] **ShortcutGuide behavior** — ✅ Confirmed: hold Win 900ms = guide appears, quick tap = no trigger
+- [ ] **ShortcutGuide behavior** — re-verify after `on_hotkey_ex` fix: long Win = guide, quick tap = nothing
 - [ ] **Workspaces EXEs live test** — deploy snapshot/launcher/arranger, verify capture → launch → arrange cycle
 - [ ] **FancyZones engine integration** — wire engine crate into module DLL, verify drag → snap flow
 

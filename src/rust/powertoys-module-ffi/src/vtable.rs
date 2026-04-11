@@ -65,6 +65,9 @@ pub trait PowerToyModule: Send {
         0
     }
 
+    /// Called when the extended hotkey triggers (e.g., long Win press for ShortcutGuide).
+    fn on_hotkey_ex(&mut self) {}
+
     /// Check GPO policy for this module.
     fn gpo_policy_enabled_configuration(&self) -> GpoRuleConfigured {
         GpoRuleConfigured::NotConfigured
@@ -158,6 +161,10 @@ pub unsafe extern "C" fn ffi_milliseconds_win_key_must_be_pressed(ctx: *mut std:
     unsafe { as_module(ctx).milliseconds_win_key_must_be_pressed() }
 }
 
+pub unsafe extern "C" fn ffi_on_hotkey_ex(ctx: *mut std::ffi::c_void) {
+    unsafe { as_module(ctx).on_hotkey_ex() }
+}
+
 /// Build a `ModuleFunctionTable` from a boxed module.
 /// The returned table owns the module via the context pointer.
 pub fn build_function_table(module: Box<dyn PowerToyModule>) -> ModuleFunctionTable {
@@ -180,6 +187,7 @@ pub fn build_function_table(module: Box<dyn PowerToyModule>) -> ModuleFunctionTa
         is_enabled_by_default: ffi_is_enabled_by_default,
         keep_track_of_pressed_win_key: ffi_keep_track_of_pressed_win_key,
         milliseconds_win_key_must_be_pressed: ffi_milliseconds_win_key_must_be_pressed,
+        on_hotkey_ex: ffi_on_hotkey_ex,
         gpo_policy_enabled_configuration: ffi_gpo_policy,
     }
 }

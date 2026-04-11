@@ -45,7 +45,7 @@ impl PowerToyModule for Module {
     fn get_key(&self) -> *const u16 { MODULE_WIDE.as_ptr() }
     fn enable(&mut self) {
         self.enabled.store(true, Ordering::SeqCst);
-        self.launch_process();
+        // Don't launch here — ShortcutGuide EXE is launched on OnHotkeyEx (long Win press)
     }
     fn disable(&mut self) {
         self.enabled.store(false, Ordering::SeqCst);
@@ -76,6 +76,21 @@ impl PowerToyModule for Module {
     fn milliseconds_win_key_must_be_pressed(&self) -> u32 {
         // Default: 900ms hold before showing the guide
         900
+    }
+
+    fn on_hotkey_ex(&mut self) {
+        if !self.enabled.load(Ordering::SeqCst) {
+            return;
+        }
+        // Toggle: if process running, kill it; otherwise start it
+        if let Some(h) = self.process_handle.take() {
+            unsafe {
+                windows_sys::Win32::System::Threading::TerminateProcess(h, 0);
+                windows_sys::Win32::Foundation::CloseHandle(h);
+            }
+        } else {
+            self.launch_process();
+        }
     }
 
     fn gpo_policy_enabled_configuration(&self) -> GpoRuleConfigured {
