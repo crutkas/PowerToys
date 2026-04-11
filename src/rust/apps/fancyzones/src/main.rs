@@ -39,8 +39,53 @@ fn main() {
     }
 
     let mut fz_app = app::FancyZonesApp::new();
+
+    // File watcher: monitor FancyZones layout data dir for changes (editor saves)
+    {
+        let thread_id = unsafe { windows_sys::Win32::System::Threading::GetCurrentThreadId() };
+        std::thread::spawn(move || {
+            watch_layout_files(thread_id);
+        });
+    }
+
     fz_app.run();
     fz_app.shutdown();
+}
+
+/// Watch the FancyZones data directory for file changes.
+/// Posts WM_FZ_LAYOUTS_CHANGED to the main thread when layout files are modified.
+fn watch_layout_files(main_thread_id: u32) {
+    let dir = match powertoys_win32::settings::module_dir("FancyZones") {
+        Some(d) => d,
+        None => return,
+    };
+    let dir_wide = powertoys_win32::string::to_wide(&dir.to_string_lossy());
+    unsafe {
+        let handle = windows_sys::Win32::Storage::FileSystem::FindFirstChangeNotificationW(
+            dir_wide.as_ptr(),
+            0, // don't watch subtree
+            windows_sys::Win32::Storage::FileSystem::FILE_NOTIFY_CHANGE_LAST_WRITE,
+        );
+        if handle.is_null() || handle == windows_sys::Win32::Foundation::INVALID_HANDLE_VALUE {
+            return;
+        }
+        loop {
+            let wait = windows_sys::Win32::System::Threading::WaitForSingleObject(handle, u32::MAX);
+            if wait != 0 { break; } // WAIT_OBJECT_0 = 0
+            windows_sys::Win32::UI::WindowsAndMessaging::PostThreadMessageW(
+                main_thread_id,
+                app::WM_FZ_LAYOUTS_CHANGED,
+                0,
+                0,
+            );
+            // Debounce rapid writes (editor may write multiple files)
+            std::thread::sleep(std::time::Duration::from_millis(300));
+            if windows_sys::Win32::Storage::FileSystem::FindNextChangeNotification(handle) == 0 {
+                break;
+            }
+        }
+        windows_sys::Win32::Foundation::CloseHandle(handle);
+    }
 }
 
 /// Parse `--parent-pid <PID>` from command-line arguments.

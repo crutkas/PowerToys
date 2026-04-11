@@ -38,6 +38,22 @@ impl Module {
             if ShellExecuteExW(&mut sei) != 0 { self.process_handle = Some(sei.hProcess); }
         }
     }
+
+    fn launch_editor(&self) {
+        use windows_sys::Win32::UI::Shell::*;
+        use windows_sys::Win32::UI::WindowsAndMessaging::SW_SHOWNORMAL;
+        let exe = to_wide("PowerToys.FancyZonesEditor.exe");
+        unsafe {
+            let mut sei: SHELLEXECUTEINFOW = std::mem::zeroed();
+            sei.cbSize = std::mem::size_of::<SHELLEXECUTEINFOW>() as u32;
+            sei.fMask = SEE_MASK_NOCLOSEPROCESS | SEE_MASK_FLAG_NO_UI;
+            sei.lpFile = exe.as_ptr();
+            sei.nShow = SW_SHOWNORMAL;
+            if ShellExecuteExW(&mut sei) != 0 && !sei.hProcess.is_null() {
+                windows_sys::Win32::Foundation::CloseHandle(sei.hProcess);
+            }
+        }
+    }
 }
 
 impl PowerToyModule for Module {
@@ -66,6 +82,17 @@ impl PowerToyModule for Module {
         false
     }
     fn set_config(&mut self, _config: *const u16) {}
+    fn call_custom_action(&mut self, action: *const u16) {
+        if action.is_null() { return; }
+        let action_str = unsafe {
+            let mut len = 0;
+            while *action.add(len) != 0 { len += 1; }
+            String::from_utf16_lossy(std::slice::from_raw_parts(action, len))
+        };
+        if action_str.contains("ToggledFZEditor") {
+            self.launch_editor();
+        }
+    }
     fn destroy(&mut self) { self.disable(); }
     fn gpo_policy_enabled_configuration(&self) -> GpoRuleConfigured {
         check_gpo("EnableFancyZones")

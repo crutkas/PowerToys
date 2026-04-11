@@ -21,6 +21,10 @@ pub const WM_FZ_MOVESIZE_END: u32 = WM_APP + 2;
 pub const WM_FZ_DISPLAY_CHANGE: u32 = WM_APP + 4;
 /// Custom message posted when a new window is created/shown.
 pub const WM_FZ_WINDOW_CREATED: u32 = WM_APP + 5;
+/// Custom message posted when a virtual desktop switch is detected.
+pub const WM_FZ_DESKTOP_CHANGE: u32 = WM_APP + 6;
+/// Custom message posted when layout files change on disk.
+pub const WM_FZ_LAYOUTS_CHANGED: u32 = WM_APP + 7;
 
 /// Timer ID for mouse-position polling during drag.
 const DRAG_TIMER_ID: usize = 1;
@@ -35,6 +39,7 @@ pub struct FancyZonesApp {
     overlays: Vec<ZoneOverlay>,
     move_size_hooks: Vec<WinEventHookGuard>,
     window_create_hooks: Vec<WinEventHookGuard>,
+    desktop_hooks: Vec<WinEventHookGuard>,
     keyboard_hook: Option<KeyboardHookGuard>,
     dragged_hwnd: HWND,
     msg_hwnd: HWND,
@@ -65,6 +70,7 @@ impl FancyZonesApp {
             overlays: Vec::new(),
             move_size_hooks: Vec::new(),
             window_create_hooks: Vec::new(),
+            desktop_hooks: Vec::new(),
             keyboard_hook: None,
             dragged_hwnd: ptr::null_mut(),
             msg_hwnd: ptr::null_mut(),
@@ -78,6 +84,7 @@ impl FancyZonesApp {
 
         self.move_size_hooks = hooks::install_move_size_hooks();
         self.window_create_hooks = hooks::install_window_create_hooks();
+        self.desktop_hooks = hooks::install_desktop_hooks();
         self.keyboard_hook = hooks::install_keyboard_hook(
             self.engine.settings().override_snap_hotkeys
         );
@@ -98,6 +105,8 @@ impl FancyZonesApp {
                     WM_FZ_SNAP_HOTKEY => self.on_snap_hotkey(msg.lParam as u32),
                     WM_FZ_DISPLAY_CHANGE => self.on_display_change(),
                     WM_FZ_WINDOW_CREATED => self.on_window_created(msg.wParam as HWND),
+                    WM_FZ_DESKTOP_CHANGE => self.on_desktop_change(),
+                    WM_FZ_LAYOUTS_CHANGED => self.on_layouts_changed(),
                     WM_TIMER if msg.wParam == DRAG_TIMER_ID => self.on_drag_timer(),
                     _ => {
                         TranslateMessage(&msg);
@@ -112,6 +121,7 @@ impl FancyZonesApp {
         self.hide_overlays();
         self.move_size_hooks.clear();
         self.window_create_hooks.clear();
+        self.desktop_hooks.clear();
         self.keyboard_hook = None;
         self.engine.shutdown();
         APP_PTR.with(|p| *p.borrow_mut() = ptr::null_mut());
@@ -126,6 +136,16 @@ impl FancyZonesApp {
 
     fn on_display_change(&mut self) {
         self.hide_overlays();
+        self.engine.update_work_areas();
+    }
+
+    fn on_desktop_change(&mut self) {
+        // Virtual desktop switch detected — re-check visible windows
+        self.engine.update_work_areas();
+    }
+
+    fn on_layouts_changed(&mut self) {
+        // Layout files changed on disk — reload work areas
         self.engine.update_work_areas();
     }
 

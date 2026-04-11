@@ -1,6 +1,7 @@
 //! GitHub release API client.
 
 use serde::Deserialize;
+use std::io::{Read, Write};
 use std::path::Path;
 
 const GITHUB_API: &str = "https://api.github.com/repos/microsoft/PowerToys/releases/latest";
@@ -63,20 +64,70 @@ pub fn get_latest_release() -> Result<Release, String> {
     Ok(release)
 }
 
-/// Download a file from URL to the given path.
+/// Download a file from URL to the given path, writing progress to a JSON state file.
 pub fn download_file(url: &str, dest: &Path) -> Result<(), String> {
     let response = ureq::get(url)
         .header("User-Agent", USER_AGENT)
         .call()
         .map_err(|e| format!("Download failed: {}", e))?;
 
+    let content_length: Option<u64> = response.headers().get("content-length")
+        .and_then(|v| v.to_str().ok())
+        .and_then(|v| v.parse().ok());
+
     let mut file = std::fs::File::create(dest)
         .map_err(|e| format!("Failed to create file: {}", e))?;
 
-    std::io::copy(&mut response.into_body().as_reader(), &mut file)
-        .map_err(|e| format!("Failed to write file: {}", e))?;
+    let progress_path = download_progress_path();
+    write_progress(&progress_path, 0, content_length);
 
+    let mut body = response.into_body();
+    let mut reader = body.as_reader();
+    let mut buf = [0u8; 8192];
+    let mut downloaded: u64 = 0;
+    let mut last_report: u64 = 0;
+
+    loop {
+        let n = reader.read(&mut buf).map_err(|e| format!("Read error: {}", e))?;
+        if n == 0 { break; }
+        file.write_all(&buf[..n]).map_err(|e| format!("Write error: {}", e))?;
+        downloaded += n as u64;
+
+        // Report progress every 100 KB
+        if downloaded - last_report >= 102_400 {
+            write_progress(&progress_path, downloaded, content_length);
+            last_report = downloaded;
+        }
+    }
+
+    // Final 100% progress
+    write_progress(&progress_path, downloaded, content_length);
     Ok(())
+}
+
+fn download_progress_path() -> std::path::PathBuf {
+    let local_app_data = std::env::var("LOCALAPPDATA").unwrap_or_default();
+    let mut path = std::path::PathBuf::from(local_app_data);
+    path.push("Microsoft");
+    path.push("PowerToys");
+    path.push("Updates");
+    let _ = std::fs::create_dir_all(&path);
+    path.push("download_progress.json");
+    path
+}
+
+fn write_progress(path: &std::path::Path, downloaded: u64, total: Option<u64>) {
+    let percentage = total
+        .filter(|&t| t > 0)
+        .map(|t| ((downloaded as f64 / t as f64) * 100.0).min(100.0) as u32)
+        .unwrap_or(0);
+    let json = format!(
+        r#"{{"downloaded":{},"total":{},"percentage":{}}}"#,
+        downloaded,
+        total.unwrap_or(0),
+        percentage,
+    );
+    let _ = std::fs::write(path, json);
 }
 
 /// Simple semantic version comparison (a > b).

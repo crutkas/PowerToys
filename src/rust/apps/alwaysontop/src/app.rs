@@ -27,6 +27,10 @@ const PINNED_PROP: &str = "AlwaysOnTop_Pinned";
 const DESKTOP_REFRESH_TIMER_ID: usize = 42;
 const DESKTOP_REFRESH_INTERVAL_MS: u32 = 1000;
 
+const SYSTEM_MENU_PIN_COMMAND: u32 = 0x1000;
+const EVENT_OBJECT_INVOKED: u32 = 0x8013;
+const OBJID_SYSMENU: i32 = -1;
+
 pub struct AlwaysOnTop {
     main_window: HWND,
     hinstance: HINSTANCE,
@@ -147,6 +151,7 @@ impl AlwaysOnTop {
             (EVENT_SYSTEM_FOREGROUND, EVENT_SYSTEM_FOREGROUND),
             (EVENT_OBJECT_DESTROY, EVENT_OBJECT_DESTROY),
             (EVENT_OBJECT_FOCUS, EVENT_OBJECT_FOCUS),
+            (EVENT_OBJECT_INVOKED, EVENT_OBJECT_INVOKED),
         ];
 
         for (min, max) in events_to_hook {
@@ -205,6 +210,35 @@ impl AlwaysOnTop {
             return;
         }
         self.step_window_transparency(fg, delta);
+    }
+
+    /// Add a "Pin/Unpin to top" item to the target window's system menu.
+    fn update_system_menu(&self, hwnd: HWND) {
+        unsafe {
+            let hmenu = GetSystemMenu(hwnd, 0);
+            if hmenu.is_null() { return; }
+            let count = GetMenuItemCount(hmenu);
+            for i in 0..count {
+                if GetMenuItemID(hmenu, i) == SYSTEM_MENU_PIN_COMMAND {
+                    return; // Already present
+                }
+            }
+            let text = to_wide("Pin/Unpin to top");
+            AppendMenuW(hmenu, MF_SEPARATOR, 0, std::ptr::null());
+            AppendMenuW(hmenu, MF_STRING, SYSTEM_MENU_PIN_COMMAND as usize, text.as_ptr());
+        }
+    }
+
+    /// Toggle pin for a specific window (used by system menu handler).
+    pub fn toggle_pin_for(&mut self, hwnd: HWND) {
+        if hwnd.is_null() { return; }
+        if self.is_pinned(hwnd) {
+            self.unpin_window(hwnd);
+        } else {
+            if self.is_excluded(hwnd) { return; }
+            if self.settings.block_in_game_mode && is_game_mode_active() { return; }
+            self.pin_window(hwnd);
+        }
     }
 
     fn is_pinned(&self, hwnd: HWND) -> bool {
@@ -356,6 +390,10 @@ impl AlwaysOnTop {
                 }
                 // Refresh all borders (virtual desktop changes)
                 self.refresh_borders();
+                // Update system menu for the new foreground window
+                if event == EVENT_SYSTEM_FOREGROUND {
+                    self.update_system_menu(hwnd);
+                }
             }
             _ => {}
         }
@@ -508,13 +546,29 @@ unsafe extern "system" fn win_event_proc(
     event: u32,
     hwnd: HWND,
     id_object: i32,
-    _id_child: i32,
+    id_child: i32,
     _id_event_thread: u32,
     _dwms_event_time: u32,
 ) {
     unsafe {
+        if hwnd.is_null() {
+            return;
+        }
+
+        // Handle system menu "Pin/Unpin" invocation
+        if event == EVENT_OBJECT_INVOKED
+            && id_object == OBJID_SYSMENU
+            && id_child == SYSTEM_MENU_PIN_COMMAND as i32
+        {
+            let aot = AOT_INSTANCE.as_mut();
+            if let Some(a) = aot {
+                a.toggle_pin_for(hwnd);
+            }
+            return;
+        }
+
         // Only process window-level events (OBJID_WINDOW = 0)
-        if id_object != 0 || hwnd.is_null() {
+        if id_object != 0 {
             return;
         }
         let aot = AOT_INSTANCE.as_mut();

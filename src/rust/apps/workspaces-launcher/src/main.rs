@@ -163,17 +163,44 @@ fn load_workspace(
     None
 }
 
+const ERROR_CANCELLED: u32 = 1223;
+
 fn shell_execute(path: &str, args: &str, elevated: bool) -> bool {
     let parent_dir = std::path::Path::new(path)
         .parent()
         .map(|p| p.to_string_lossy().into_owned())
         .unwrap_or_default();
 
+    // First attempt with the requested verb
+    if try_shell_execute(path, args, &parent_dir, elevated) {
+        return true;
+    }
+
+    // If non-elevated launch failed, retry with elevation ("runas")
+    if !elevated {
+        let err = unsafe { GetLastError() };
+        eprintln!("ShellExecuteEx failed (error {err}), retrying with elevation");
+        if try_shell_execute(path, args, &parent_dir, true) {
+            return true;
+        }
+    }
+
+    // Report final failure
+    let err = unsafe { GetLastError() };
+    if err == ERROR_CANCELLED {
+        eprintln!("User declined UAC prompt for '{path}'");
+    } else {
+        eprintln!("ShellExecuteEx failed: error {err}");
+    }
+    false
+}
+
+fn try_shell_execute(path: &str, args: &str, parent_dir: &str, elevated: bool) -> bool {
     let verb = if elevated { "runas" } else { "open" };
     let wide_verb = to_wide(verb);
     let wide_file = to_wide(path);
     let wide_args = to_wide(args);
-    let wide_dir = to_wide(&parent_dir);
+    let wide_dir = to_wide(parent_dir);
 
     let mut sei: SHELLEXECUTEINFOW = unsafe { std::mem::zeroed() };
     sei.cbSize = std::mem::size_of::<SHELLEXECUTEINFOW>() as u32;
@@ -191,8 +218,6 @@ fn shell_execute(path: &str, args: &str, elevated: bool) -> bool {
         }
         true
     } else {
-        let err = unsafe { GetLastError() };
-        eprintln!("ShellExecuteEx failed: error {err}");
         false
     }
 }

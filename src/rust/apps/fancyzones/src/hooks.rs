@@ -10,7 +10,7 @@ use windows_sys::Win32::UI::Accessibility::{SetWinEventHook, UnhookWinEvent};
 use windows_sys::Win32::UI::Input::KeyboardAndMouse::*;
 use windows_sys::Win32::UI::WindowsAndMessaging::*;
 
-use crate::app::{WM_FZ_MOVESIZE_START, WM_FZ_MOVESIZE_END, WM_FZ_WINDOW_CREATED};
+use crate::app::{WM_FZ_MOVESIZE_START, WM_FZ_MOVESIZE_END, WM_FZ_WINDOW_CREATED, WM_FZ_DESKTOP_CHANGE};
 
 /// Custom message for keyboard snap (Win+Arrow intercepted).
 pub const WM_FZ_SNAP_HOTKEY: u32 = WM_APP + 3;
@@ -114,6 +114,48 @@ unsafe extern "system" fn window_show_event_proc(
     }
 }
 
+/// Install a WinEvent hook for `EVENT_OBJECT_NAMECHANGE` to detect virtual desktop switches.
+pub fn install_desktop_hooks() -> Vec<WinEventHookGuard> {
+    let mut guards = Vec::new();
+
+    let h = unsafe {
+        SetWinEventHook(
+            EVENT_OBJECT_NAMECHANGE,
+            EVENT_OBJECT_NAMECHANGE,
+            ptr::null_mut(),
+            Some(desktop_name_change_proc),
+            0,
+            0,
+            0x0002, // WINEVENT_OUTOFCONTEXT | WINEVENT_SKIPOWNPROCESS
+        )
+    };
+    if !h.is_null() {
+        guards.push(WinEventHookGuard { handle: h });
+    }
+
+    guards
+}
+
+/// WinEvent callback for EVENT_OBJECT_NAMECHANGE — fires when the desktop accessibility
+/// name changes, which happens on virtual desktop switches.
+unsafe extern "system" fn desktop_name_change_proc(
+    _hook: *mut core::ffi::c_void,
+    _event: u32,
+    hwnd: HWND,
+    id_object: i32,
+    _id_child: i32,
+    _event_thread: u32,
+    _event_time: u32,
+) {
+    if id_object != 0 || hwnd.is_null() { return; }
+    // Only respond to name changes on the desktop window (virtual desktop switch signal)
+    if unsafe { hwnd == GetDesktopWindow() } {
+        unsafe {
+            PostThreadMessageW(GetCurrentThreadId(), WM_FZ_DESKTOP_CHANGE, 0, 0);
+        }
+    }
+}
+
 /// WinEvent callback. Runs on the thread that called `SetWinEventHook` (out-of-context).
 /// Posts a custom message so the main loop can handle it synchronously.
 unsafe extern "system" fn win_event_proc(
@@ -125,9 +167,6 @@ unsafe extern "system" fn win_event_proc(
     _event_thread: u32,
     _event_time: u32,
 ) {
-    let _ = std::fs::write(r"C:\Users\crutkas\AppData\Local\Temp\fz_rust_winevent.txt",
-        format!("WinEvent: event={} hwnd={:?}", event, hwnd));
-
     let msg = match event {
         EVENT_SYSTEM_MOVESIZESTART => WM_FZ_MOVESIZE_START,
         EVENT_SYSTEM_MOVESIZEEND => WM_FZ_MOVESIZE_END,
