@@ -1,0 +1,70 @@
+name: Rust CI
+
+on:
+  push:
+    branches: [rust-awake-module]
+    paths: ['src/rust/**']
+  pull_request:
+    paths: ['src/rust/**']
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build-and-test:
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        target: [x86_64-pc-windows-msvc]
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Cache cargo registry and build
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            src/rust/target
+          key: ${{ runner.os }}-cargo-${{ matrix.target }}-${{ hashFiles('src/rust/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-${{ matrix.target }}-
+
+      - name: Build (debug)
+        working-directory: src/rust
+        run: cargo build --workspace --target ${{ matrix.target }}
+
+      - name: Test
+        working-directory: src/rust
+        run: cargo test --workspace --target ${{ matrix.target }}
+
+      - name: Build (release)
+        working-directory: src/rust
+        run: cargo build --workspace --target ${{ matrix.target }} --release
+
+      - name: Report DLL sizes
+        working-directory: src/rust
+        shell: pwsh
+        run: |
+          $rel = "target/${{ matrix.target }}/release"
+          Get-ChildItem "$rel/*.dll","$rel/*.exe" | Where-Object { $_.Name -match "module_interface|AlwaysOnTop|ActionRunner|awake" } |
+            Select-Object Name, @{N='KB';E={[math]::Round($_.Length/1KB)}} |
+            Format-Table -AutoSize
+
+      - name: Upload release artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: rust-modules-${{ matrix.target }}
+          path: |
+            src/rust/target/${{ matrix.target }}/release/*_module_interface.dll
+            src/rust/target/${{ matrix.target }}/release/PowerToys-AlwaysOnTop.exe
+            src/rust/target/${{ matrix.target }}/release/PowerToys-ActionRunner.exe
+            src/rust/target/${{ matrix.target }}/release/awake.exe
