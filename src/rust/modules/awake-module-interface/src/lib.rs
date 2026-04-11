@@ -18,8 +18,6 @@ mod wide;
 
 use settings::AwakeSettings;
 
-const EXIT_EVENT_NAME: &str = "POWERTOYS_AWAKE_EXIT_EVENT";
-
 pub struct AwakeModule {
     enabled: AtomicBool,
     settings: AwakeSettings,
@@ -129,26 +127,23 @@ impl AwakeModule {
         Ok(pid)
     }
 
-    /// Signal the named exit event to tell awake.exe to stop.
-    fn signal_exit_event(&self) {
-        use windows_sys::Win32::System::Threading::{OpenEventW, SetEvent};
-        use windows_sys::Win32::Foundation::CloseHandle;
-        use windows_sys::Win32::System::Threading::EVENT_MODIFY_STATE;
+    /// Stop the running awake.exe process.
+    /// The Rust awake binary doesn't use named events — it exits when
+    /// the watched PID dies or on process termination.
+    fn stop_awake(&mut self) {
+        if let Some(pid) = self.child_process.take() {
+            use windows_sys::Win32::System::Threading::{OpenProcess, TerminateProcess, WaitForSingleObject};
+            use windows_sys::Win32::Foundation::CloseHandle;
 
-        let event_name: Vec<u16> = EXIT_EVENT_NAME
-            .encode_utf16()
-            .chain(std::iter::once(0))
-            .collect();
-
-        unsafe {
-            let handle = OpenEventW(EVENT_MODIFY_STATE, 0, event_name.as_ptr());
-            if !handle.is_null() {
-                SetEvent(handle);
-                CloseHandle(handle);
-                eprintln!("[Awake] Signaled exit event");
-            } else {
-                eprintln!("[Awake] Exit event not found (awake.exe may not be running)");
+            unsafe {
+                let handle = OpenProcess(0x0001 | 0x00100000, 0, pid); // PROCESS_TERMINATE | SYNCHRONIZE
+                if !handle.is_null() {
+                    TerminateProcess(handle, 0);
+                    WaitForSingleObject(handle, 1000);
+                    CloseHandle(handle);
+                }
             }
+            eprintln!("[Awake] Stopped awake.exe (PID: {})", pid);
         }
     }
 }
@@ -171,9 +166,8 @@ impl PowerToyModule for AwakeModule {
 
     fn disable(&mut self) {
         if self.enabled.load(Ordering::SeqCst) {
-            self.signal_exit_event();
+            self.stop_awake();
             self.enabled.store(false, Ordering::SeqCst);
-            self.child_process = None;
         }
     }
 
@@ -211,8 +205,24 @@ impl PowerToyModule for AwakeModule {
             return;
         }
         let s = wide::wide_to_string(config);
-        if let Some(settings) = AwakeSettings::from_json(&s) {
-            self.settings = settings;
+        if let Some(new_settings) = AwakeSettings::from_json(&s) {
+            let was_enabled = self.enabled.load(Ordering::SeqCst);
+            let settings_changed =
+                new_settings.properties.awake_mode.value != self.settings.properties.awake_mode.value
+                || new_settings.properties.awake_keep_display_on.value != self.settings.properties.awake_keep_display_on.value
+                || new_settings.properties.awake_hours.value != self.settings.properties.awake_hours.value
+                || new_settings.properties.awake_minutes.value != self.settings.properties.awake_minutes.value;
+
+            self.settings = new_settings;
+
+            // Restart awake.exe with new flags if settings changed while enabled
+            if was_enabled && settings_changed {
+                eprintln!("[Awake] Settings changed, restarting with new flags");
+                self.stop_awake();
+                // Brief pause for the old process to exit
+                unsafe { windows_sys::Win32::System::Threading::Sleep(200); }
+                self.launch_awake();
+            }
         }
     }
 
