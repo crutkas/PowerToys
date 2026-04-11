@@ -71,6 +71,7 @@ $Exes = @{
     "PowerToys_WorkspacesSnapshotTool.exe"   = "PowerToys.WorkspacesSnapshotTool.exe"
     "PowerToys_WorkspacesLauncher.exe"       = "PowerToys.WorkspacesLauncher.exe"
     "PowerToys_WorkspacesWindowArranger.exe" = "PowerToys.WorkspacesWindowArranger.exe"
+    "PowerToys-FancyZones.exe"               = "PowerToys.FancyZones.exe"
 }
 
 # Step 1: Build

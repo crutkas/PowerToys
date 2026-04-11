@@ -24,6 +24,7 @@ members = [
     "apps/workspaces-snapshot",
     "apps/workspaces-launcher",
     "apps/workspaces-arranger",
+    "apps/fancyzones",
     "tests/integration",
     "libs/powertoys-win32",
     "libs/fancyzones-core",
