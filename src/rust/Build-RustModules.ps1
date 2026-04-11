@@ -61,6 +61,18 @@ $Dlls = @{
     "shortcutguide_module_interface.dll"   = "PowerToys.ShortcutGuideModuleInterface.dll"
     "workspaces_module_interface.dll"      = "PowerToys.WorkspacesModuleInterface.dll"
     "zoomit_module_interface.dll"          = "PowerToys.ZoomItModuleInterface.dll"
+    # New module DLLs
+    "environmentvariables_module_interface.dll" = "PowerToys.EnvironmentVariablesModuleInterface.dll"
+    "hosts_module_interface.dll"           = "PowerToys.HostsModuleInterface.dll"
+    "mousejump_module_interface.dll"       = "PowerToys.MouseJumpModuleInterface.dll"
+    "cursorwrap_module_interface.dll"      = "PowerToys.CursorWrapModuleInterface.dll"
+    "highlighter_module_interface.dll"     = "PowerToys.MouseHighlighterModuleInterface.dll"
+    "findmymouse_module.dll"              = "PowerToys.FindMyMouseModuleInterface.dll"
+    "measuretool_module_interface.dll"    = "PowerToys.MeasureToolModuleInterface.dll"
+    # Shared FFI libraries
+    "powertoys_settings_ffi.dll"          = "PowerToys.Settings.FFI.dll"
+    "powertoys_logger_ffi.dll"            = "PowerToys.Logger.FFI.dll"
+    "runner_core.dll"                     = "PowerToys.RunnerCore.dll"
 }
 
 $Exes = @{
