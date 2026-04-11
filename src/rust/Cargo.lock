@@ -435,8 +435,10 @@ dependencies = [
  "cc",
  "highlighter-core",
  "powertoys-module-ffi",
+ "powertoys-win32",
  "serde",
  "serde_json",
+ "windows",
  "windows-sys 0.59.0",
 ]
 
@@ -526,6 +528,8 @@ name = "measuretool"
 version = "0.1.0"
 dependencies = [
  "measuretool-core",
+ "powertoys-win32",
+ "windows",
  "windows-sys 0.59.0",
 ]
 

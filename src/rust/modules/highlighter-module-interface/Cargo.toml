@@ -14,6 +14,14 @@ crate-type = ["cdylib", "staticlib"]
 [dependencies]
 powertoys-module-ffi = { path = "../../powertoys-module-ffi" }
 highlighter-core = { path = "../../libs/highlighter-core" }
+powertoys-win32 = { path = "../../libs/powertoys-win32" }
+windows = { version = "0.58", features = [
+    "Win32_Graphics_Direct2D",
+    "Win32_Graphics_Direct2D_Common",
+    "Win32_Graphics_Dxgi_Common",
+    "Win32_System_Com",
+    "Foundation_Numerics",
+] }
 windows-sys = { version = "0.59", features = [
     "Win32_Foundation",
     "Win32_System_LibraryLoader",

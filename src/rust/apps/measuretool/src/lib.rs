@@ -8,6 +8,8 @@
 //!
 //! The module interface DLL launches this as a separate process.
 
+pub mod overlay;
+
 use measuretool_core::settings::MeasureToolSettings;
 use measuretool_core::types::MeasureMode;
 
@@ -61,19 +63,7 @@ pub fn run(args: Vec<String>) -> i32 {
         parsed.mode, settings.pixel_tolerance, parsed.wait_pid
     );
 
-    // TODO: Implement the Win32 overlay window, D2D rendering, and screen capture.
-    // The overlay loop will:
-    // 1. Create a transparent layered window covering all monitors
-    // 2. Capture the screen via BitBlt into a PixelBuffer
-    // 3. On mouse move: run edge detection + compute measurements
-    // 4. Render measurement lines and text via D2D/DirectWrite
-    // 5. Handle keyboard: Esc to exit, scroll wheel to adjust tolerance
-    //
-    // For now, this is a placeholder that exits immediately.
-    // The core logic is fully implemented and tested in measuretool-core.
-
-    eprintln!("[MeasureTool] Exiting (overlay not yet implemented)");
-    0
+    overlay::run_overlay(parsed.mode, settings)
 }
 
 #[cfg(test)]
@@ -132,11 +122,5 @@ mod tests {
         ]);
         assert_eq!(args.wait_pid, Some(5678));
         assert_eq!(args.mode, MeasureMode::Bounds);
-    }
-
-    #[test]
-    fn test_run_returns_zero() {
-        let result = run(vec!["measuretool".to_string()]);
-        assert_eq!(result, 0);
     }
 }
