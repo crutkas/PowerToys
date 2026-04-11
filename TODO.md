@@ -31,28 +31,29 @@
 ## 📋 Phase 3 Backlog
 
 ### Next up
-- [ ] `powertoys-win32` shared Rust crate (window enum, virtual desktop COM, monitor, DPI)
+- [x] `powertoys-win32` shared Rust crate (37 tests — string, event, process, monitor, window, mutex, settings, rect)
+- [x] `fancyzones-core` Rust crate (130 tests — zone math, layout, data, keyboard snap, settings, util)
+- [x] `workspaces-core` Rust crate (83 tests — string, app detection, data, JSON, PWA, launch status, window arrange)
 - [ ] Workspaces 3 EXEs (using shared crate, 21 MB → 500 KB)
 - [ ] FancyZones core engine → Rust (6,780 LOC, snap logic, layout system)
-- [ ] ZoomIt Tier 1 (zoom + draw + break, GDI+ → D2D upgrade)
 
 ### Future
-- [ ] ZoomIt Tier 2-3 (recording, OCR, panorama)
+- [ ] ZoomIt (all tiers — zoom, draw, break, recording, OCR, panorama)
 - [ ] Runner modernization (thin C++ shell + Rust core lib)
 
 ## 🧪 Test Coverage Analysis (for porting safety)
 
-### FancyZones — ~42+ tests, ~55% coverage
-- ✅ **Well tested:** Zone math, layout calculations, JSON persistence, keyboard snapping, multi-monitor basics
-- ⚠️ **Partial:** Window-zone assignment, virtual desktop tracking
-- ❌ **No tests:** Window drag detection, DPI scaling, monitor hotplug, resize behavior
-- **Verdict:** Core engine (zone math, layout init, snapping) has enough tests to port confidently. Win32 interaction layer needs test investment first.
+### FancyZones — 130 Rust tests ✅
+- ✅ Zone math, layout calculations, JSON persistence, keyboard snapping, multi-monitor ordering
+- ✅ Device ID parsing, work area ID comparison, window-zone assignment, bitmask ops
+- ⚠️ **Still no tests for:** Window drag detection, DPI scaling, monitor hotplug, resize behavior
+- **Verdict:** Core engine well-covered in Rust. Win32 interaction layer gaps remain.
 
-### Workspaces — 61 tests, ~15-20% coverage
-- ✅ **Well tested:** Utility functions (AppUtils 17, JsonUtils 8, StringUtils 8, PwaHelper 7, WorkspacesData 11)
-- ❌ **Zero tests:** Window arrangement, app launching, IPC, launch status tracking, command line args
-- ⚠️ **19+ tests disabled/commented out** (editor UI, launcher stability issues)
-- **Verdict:** Helpers are safe to port. Core logic (arranging windows, launching apps) has no safety net — needs test investment before porting.
+### Workspaces — 83 Rust tests ✅
+- ✅ String utils, app detection, data structs, JSON, PWA lookup — all C++ tests ported
+- ✅ **NEW:** Launch status state machine (13 tests), window arrangement distance/overlap (13 tests)
+- ⚠️ **Still no tests for:** IPC communication, actual process launching, registry queries
+- **Verdict:** Core logic now has safety net. Win32 interaction layer gaps remain.
 
 ## 🚫 Not Porting
 
@@ -71,7 +72,7 @@
 | Runner RAM (private) | 87.5 MB | 55.6 MB |
 | AlwaysOnTop RAM | 39.8 MB | 1.2 MB |
 | Awake RAM | ~50 MB | 5.0 MB |
-| Rust tests | 0 | 221 |
+| Rust tests | 0 | 471 |
 
 ## 📁 Plan Documents
 
