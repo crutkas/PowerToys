@@ -88,6 +88,12 @@ impl Module {
     }
 
     fn toggle_process(&mut self) {
+        let _ = std::fs::write(
+            format!("{}\\sg_toggle_debug.txt", std::env::var("TEMP").unwrap_or_default()),
+            format!("toggle_process called! enabled={} has_process={}\nBacktrace not available in release\n",
+                self.enabled.load(Ordering::SeqCst),
+                self.process_handle.is_some())
+        );
         if let Some(h) = self.process_handle.take() {
             unsafe {
                 windows_sys::Win32::System::Threading::TerminateProcess(h, 0);
@@ -150,6 +156,9 @@ impl PowerToyModule for Module {
     }
 
     fn on_hotkey(&mut self, _hotkey_id: usize) -> bool {
+        if !self.enabled.load(Ordering::SeqCst) {
+            return false;
+        }
         self.toggle_process();
         true
     }

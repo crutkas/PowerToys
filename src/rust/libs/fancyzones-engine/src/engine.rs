@@ -82,32 +82,34 @@ impl FancyZonesEngine {
         }
     }
 
-    /// Begin tracking a window drag.
+    /// Begin tracking a window drag. Always start — Shift check happens during move.
     pub fn on_move_size_start(&mut self, hwnd: HWND) {
+        let mut drag = DragState::new(hwnd as u64);
+        drag.enable_snapping();
+        self.active_drag = Some(drag);
+    }
+
+    /// Update drag position. Returns whether zones should be shown.
+    pub fn on_mouse_move(&mut self, x: i32, y: i32) -> bool {
         let should_snap = if self.settings.shift_drag {
             is_shift_held()
         } else {
             !is_shift_held()
         };
 
-        if should_snap {
-            let mut drag = DragState::new(hwnd as u64);
-            drag.enable_snapping();
-            self.active_drag = Some(drag);
-        }
-    }
-
-    /// Update drag position.
-    pub fn on_mouse_move(&mut self, x: i32, y: i32) {
         if let Some(ref mut drag) = self.active_drag {
-            drag.update(
-                x,
-                y,
-                &self.work_areas,
-                self.settings.overlapping_zones_algorithm,
-                is_ctrl_held(),
-            );
+            if should_snap {
+                drag.update(
+                    x,
+                    y,
+                    &self.work_areas,
+                    self.settings.overlapping_zones_algorithm,
+                    is_ctrl_held(),
+                );
+                return true;
+            }
         }
+        false
     }
 
     /// End drag and return the snap target rect if any.

@@ -115,21 +115,13 @@ impl FancyZonesApp {
     // ---- Drag lifecycle --------------------------------------------------
 
     fn on_move_size_start(&mut self, hwnd: HWND) {
-        let _ = std::fs::write(r"C:\Users\crutkas\AppData\Local\Temp\fz_rust_drag.txt",
-            format!("DRAG START hwnd={:?} is_null={} work_areas={} is_dragging_before={}",
-                hwnd, hwnd.is_null(), self.engine.work_areas().len(), self.engine.is_dragging()));
-        if hwnd.is_null() {
-            return;
-        }
+        if hwnd.is_null() { return; }
         self.dragged_hwnd = hwnd;
         self.engine.on_move_size_start(hwnd);
 
-        if self.engine.is_dragging() {
-            self.show_overlays();
-            // Start polling mouse position.
-            if !self.msg_hwnd.is_null() {
-                unsafe { SetTimer(self.msg_hwnd, DRAG_TIMER_ID, DRAG_TIMER_MS, None); }
-            }
+        // Always start the timer — Shift is checked continuously during drag
+        if !self.msg_hwnd.is_null() {
+            unsafe { SetTimer(self.msg_hwnd, DRAG_TIMER_ID, DRAG_TIMER_MS, None); }
         }
     }
 
@@ -138,8 +130,15 @@ impl FancyZonesApp {
             return;
         }
         if let Some((x, y)) = win32::get_cursor_pos() {
-            self.engine.on_mouse_move(x, y);
-            self.update_overlay_highlight();
+            let should_show = self.engine.on_mouse_move(x, y);
+            if should_show {
+                if self.overlays.is_empty() {
+                    self.show_overlays();
+                }
+                self.update_overlay_highlight();
+            } else if !self.overlays.is_empty() {
+                self.hide_overlays();
+            }
         }
     }
 
