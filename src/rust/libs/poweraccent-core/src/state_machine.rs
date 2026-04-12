@@ -179,9 +179,19 @@ impl AccentStateMachine {
                 }
                 KeyResult::pass_through()
             }
-            // Suppress repeated/different letter while accent picker is active
+            // Suppress SAME letter repeat while accent picker is active
             // (on-screen keyboard sends WM_KEYDOWN continuously while key held)
-            State::AccentActive { .. } => KeyResult::suppressed(vec![]),
+            // https://github.com/microsoft/PowerToys/issues/36853
+            State::AccentActive {
+                letter: active_letter,
+                ..
+            } => {
+                if letter == *active_letter {
+                    KeyResult::suppressed(vec![])
+                } else {
+                    KeyResult::pass_through()
+                }
+            }
             // Ignore repeat while tracking but not yet active
             State::LetterHeld { .. } => KeyResult::pass_through(),
         }
@@ -567,15 +577,16 @@ mod tests {
         assert!(r.actions.is_empty(), "No actions needed for repeat suppression");
     }
 
-    // --- Different letter while accent active is also suppressed ---
+    // --- Different letter while accent active passes through (C++ behavior) ---
     #[test]
-    fn different_letter_while_accent_active_suppressed() {
+    fn different_letter_while_accent_active_passes_through() {
         let mut sm = make_sm();
         sm.on_key_down(VK_E, 0, false);
         sm.on_key_down(VK_SPACE, 50, false);
         assert!(sm.selected_char().is_some());
 
+        // Different letter passes through — only SAME letter is suppressed
         let r = sm.on_key_down(VK_A, 100, false);
-        assert!(r.suppress, "Different letter while accent active must be suppressed");
+        assert!(!r.suppress, "Different letter should pass through per C++ behavior");
     }
 }

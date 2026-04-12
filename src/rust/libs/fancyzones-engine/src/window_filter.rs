@@ -14,7 +14,21 @@ pub enum RejectReason {
     NonProcessablePopup,
     ChildWindow,
     Excluded,
+    DefaultExcluded,
 }
+
+/// Default excluded folders — windows from these paths are always excluded.
+const DEFAULT_EXCLUDED_FOLDERS: &[&str] = &["SYSTEMAPPS"];
+
+/// Default excluded apps/classes — always excluded regardless of user settings.
+const DEFAULT_EXCLUDED_APPS: &[&str] = &[
+    "POWERTOYS.FANCYZONESEDITOR.EXE",
+    "Windows.UI.Core.CoreWindow",
+    "SearchUI.exe",
+];
+
+/// MsoSplash window class name (e.g. Office splash screens).
+const SPLASH_CLASS_NAME: &str = "MsoSplash";
 
 /// Check if a window is suitable for zone snapping.
 /// Returns Ok(()) if processable, Err(reason) if not.
@@ -60,7 +74,7 @@ pub fn is_window_processable(hwnd: HWND, excluded_apps: &[String], allow_child_w
             }
         }
 
-        // Excluded apps
+        // Excluded apps (user-configured)
         if !excluded_apps.is_empty() {
             if let Some(exe_name) = get_exe_name(hwnd) {
                 let exe_lower = exe_name.to_lowercase();
@@ -72,7 +86,62 @@ pub fn is_window_processable(hwnd: HWND, excluded_apps: &[String], allow_child_w
             }
         }
 
+        // Default exclusions (matching C++ IsExcludedByDefault)
+        if is_excluded_by_default(hwnd) {
+            return Err(RejectReason::DefaultExcluded);
+        }
+
         Ok(())
+    }
+}
+
+/// Check if a window is excluded by default (hardcoded exclusions matching C++).
+pub fn is_excluded_by_default(hwnd: HWND) -> bool {
+    // Check process path for excluded folders (e.g. SystemApps)
+    if let Some(path) = get_exe_path(hwnd) {
+        let path_upper = path.to_uppercase();
+        for folder in DEFAULT_EXCLUDED_FOLDERS {
+            if path_upper.contains(folder) {
+                return true;
+            }
+        }
+
+        // Check against default excluded apps by process name
+        if let Some(exe_name) = path.rsplit('\\').next() {
+            let exe_upper = exe_name.to_uppercase();
+            for app in DEFAULT_EXCLUDED_APPS {
+                if exe_upper == app.to_uppercase() {
+                    return true;
+                }
+            }
+        }
+    }
+
+    // Check window class name for MsoSplash
+    if let Some(class_name) = get_class_name(hwnd) {
+        if class_name == SPLASH_CLASS_NAME {
+            return true;
+        }
+        // Check for CoreWindow class
+        for app in DEFAULT_EXCLUDED_APPS {
+            if class_name == *app {
+                return true;
+            }
+        }
+    }
+
+    false
+}
+
+/// Get the window class name.
+fn get_class_name(hwnd: HWND) -> Option<String> {
+    unsafe {
+        let mut buf = [0u8; 256];
+        let len = GetClassNameA(hwnd, buf.as_mut_ptr(), buf.len() as i32);
+        if len <= 0 {
+            return None;
+        }
+        Some(String::from_utf8_lossy(&buf[..len as usize]).to_string())
     }
 }
 
@@ -121,6 +190,7 @@ mod tests {
             RejectReason::NonProcessablePopup,
             RejectReason::ChildWindow,
             RejectReason::Excluded,
+            RejectReason::DefaultExcluded,
         ];
         for (i, a) in reasons.iter().enumerate() {
             for (j, b) in reasons.iter().enumerate() {
@@ -162,5 +232,38 @@ mod tests {
         let exe_lower = exe.to_lowercase();
         let matched = excluded.iter().any(|app| exe_lower.contains(&app.to_lowercase()));
         assert!(matched);
+    }
+
+    #[test]
+    fn default_excluded_folders_contains_systemapps() {
+        assert!(DEFAULT_EXCLUDED_FOLDERS.contains(&"SYSTEMAPPS"));
+    }
+
+    #[test]
+    fn default_excluded_apps_contains_expected() {
+        assert!(DEFAULT_EXCLUDED_APPS.contains(&"POWERTOYS.FANCYZONESEDITOR.EXE"));
+        assert!(DEFAULT_EXCLUDED_APPS.contains(&"Windows.UI.Core.CoreWindow"));
+        assert!(DEFAULT_EXCLUDED_APPS.contains(&"SearchUI.exe"));
+    }
+
+    #[test]
+    fn splash_class_name_is_msosplash() {
+        assert_eq!(SPLASH_CLASS_NAME, "MsoSplash");
+    }
+
+    #[test]
+    fn default_folder_exclusion_logic() {
+        let path = r"C:\WINDOWS\SYSTEMAPPS\Microsoft.Windows.StartMenuExperienceHost_cw5n1h2txyewy\StartMenuExperienceHost.exe";
+        let path_upper = path.to_uppercase();
+        let matched = DEFAULT_EXCLUDED_FOLDERS.iter().any(|f| path_upper.contains(f));
+        assert!(matched);
+    }
+
+    #[test]
+    fn default_folder_exclusion_no_match() {
+        let path = r"C:\Program Files\MyApp\app.exe";
+        let path_upper = path.to_uppercase();
+        let matched = DEFAULT_EXCLUDED_FOLDERS.iter().any(|f| path_upper.contains(f));
+        assert!(!matched);
     }
 }

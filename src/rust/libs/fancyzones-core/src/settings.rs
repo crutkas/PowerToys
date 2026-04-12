@@ -20,6 +20,7 @@ impl Default for OverlappingZonesAlgorithm {
 pub struct Settings {
     pub shift_drag: bool,
     pub mouse_switch: bool,
+    pub mouse_middle_click_spanning_multiple_zones: bool,
     pub display_or_work_area_change_move_windows: bool,
     pub zone_set_change_flash_zones: bool,
     pub zone_set_change_move_windows: bool,
@@ -34,9 +35,16 @@ pub struct Settings {
     pub span_zones_across_monitors: bool,
     pub make_dragged_window_transparent: bool,
     pub window_switching: bool,
+    pub quick_layout_switch: bool,
+    pub flash_zones_on_quick_switch: bool,
+    pub system_theme: bool,
+    pub show_zone_number: bool,
+    pub allow_snap_child_windows: bool,
+    pub disable_round_corners: bool,
     pub zone_color: String,
     pub zone_border_color: String,
     pub zone_highlight_color: String,
+    pub zone_number_color: String,
     pub zone_highlight_opacity: i32,
     pub overlapping_zones_algorithm: OverlappingZonesAlgorithm,
     pub excluded_apps: String,
@@ -48,6 +56,7 @@ impl Default for Settings {
         Self {
             shift_drag: true,
             mouse_switch: false,
+            mouse_middle_click_spanning_multiple_zones: false,
             display_or_work_area_change_move_windows: true,
             zone_set_change_flash_zones: false,
             zone_set_change_move_windows: false,
@@ -62,9 +71,16 @@ impl Default for Settings {
             span_zones_across_monitors: false,
             make_dragged_window_transparent: true,
             window_switching: true,
+            quick_layout_switch: true,
+            flash_zones_on_quick_switch: true,
+            system_theme: true,
+            show_zone_number: true,
+            allow_snap_child_windows: false,
+            disable_round_corners: false,
             zone_color: "#AACDFF".to_string(),
             zone_border_color: "#FFFFFF".to_string(),
             zone_highlight_color: "#008CFF".to_string(),
+            zone_number_color: "#000000".to_string(),
             zone_highlight_opacity: 50,
             overlapping_zones_algorithm: OverlappingZonesAlgorithm::Smallest,
             excluded_apps: String::new(),
@@ -98,6 +114,7 @@ impl Settings {
         Self {
             shift_drag: get_bool("fancyzones_shiftDrag", defaults.shift_drag),
             mouse_switch: get_bool("fancyzones_mouseSwitch", defaults.mouse_switch),
+            mouse_middle_click_spanning_multiple_zones: get_bool("fancyzones_mouseMiddleClickSpanningMultipleZones", defaults.mouse_middle_click_spanning_multiple_zones),
             display_or_work_area_change_move_windows: get_bool("fancyzones_displayOrWorkAreaChange_moveWindows", defaults.display_or_work_area_change_move_windows),
             zone_set_change_flash_zones: get_bool("fancyzones_zoneSetChange_flashZones", defaults.zone_set_change_flash_zones),
             zone_set_change_move_windows: get_bool("fancyzones_zoneSetChange_moveWindows", defaults.zone_set_change_move_windows),
@@ -109,12 +126,19 @@ impl Settings {
             restore_size: get_bool("fancyzones_restoreSize", defaults.restore_size),
             use_cursorpos_editor_startupscreen: get_bool("use_cursorpos_editor_startupscreen", defaults.use_cursorpos_editor_startupscreen),
             show_zones_on_all_monitors: get_bool("fancyzones_show_on_all_monitors", defaults.show_zones_on_all_monitors),
-            span_zones_across_monitors: get_bool("fancyzones_multi_monitor_mode", defaults.span_zones_across_monitors),
+            span_zones_across_monitors: get_bool("fancyzones_span_zones_across_monitors", defaults.span_zones_across_monitors),
             make_dragged_window_transparent: get_bool("fancyzones_makeDraggedWindowTransparent", defaults.make_dragged_window_transparent),
             window_switching: get_bool("fancyzones_windowSwitching", defaults.window_switching),
+            quick_layout_switch: get_bool("fancyzones_quickLayoutSwitch", defaults.quick_layout_switch),
+            flash_zones_on_quick_switch: get_bool("fancyzones_flashZonesOnQuickSwitch", defaults.flash_zones_on_quick_switch),
+            system_theme: get_bool("fancyzones_systemTheme", defaults.system_theme),
+            show_zone_number: get_bool("fancyzones_showZoneNumber", defaults.show_zone_number),
+            allow_snap_child_windows: get_bool("fancyzones_allowChildWindowSnap", defaults.allow_snap_child_windows),
+            disable_round_corners: get_bool("fancyzones_disableRoundCornersOnSnap", defaults.disable_round_corners),
             zone_color: get_str("fancyzones_zoneColor", &defaults.zone_color),
             zone_border_color: get_str("fancyzones_zoneBorderColor", &defaults.zone_border_color),
             zone_highlight_color: get_str("fancyzones_zoneHighlightColor", &defaults.zone_highlight_color),
+            zone_number_color: get_str("fancyzones_zoneNumberColor", &defaults.zone_number_color),
             zone_highlight_opacity: get_i32("fancyzones_highlight_opacity", defaults.zone_highlight_opacity),
             overlapping_zones_algorithm: defaults.overlapping_zones_algorithm,
             excluded_apps: excluded_apps.clone(),
@@ -132,6 +156,7 @@ mod tests {
     fn compare_settings(expected: &Settings, actual: &Settings) {
         assert_eq!(expected.shift_drag, actual.shift_drag);
         assert_eq!(expected.mouse_switch, actual.mouse_switch);
+        assert_eq!(expected.mouse_middle_click_spanning_multiple_zones, actual.mouse_middle_click_spanning_multiple_zones);
         assert_eq!(expected.display_or_work_area_change_move_windows, actual.display_or_work_area_change_move_windows);
         assert_eq!(expected.zone_set_change_flash_zones, actual.zone_set_change_flash_zones);
         assert_eq!(expected.zone_set_change_move_windows, actual.zone_set_change_move_windows);
@@ -146,9 +171,16 @@ mod tests {
         assert_eq!(expected.span_zones_across_monitors, actual.span_zones_across_monitors);
         assert_eq!(expected.make_dragged_window_transparent, actual.make_dragged_window_transparent);
         assert_eq!(expected.window_switching, actual.window_switching);
+        assert_eq!(expected.quick_layout_switch, actual.quick_layout_switch);
+        assert_eq!(expected.flash_zones_on_quick_switch, actual.flash_zones_on_quick_switch);
+        assert_eq!(expected.system_theme, actual.system_theme);
+        assert_eq!(expected.show_zone_number, actual.show_zone_number);
+        assert_eq!(expected.allow_snap_child_windows, actual.allow_snap_child_windows);
+        assert_eq!(expected.disable_round_corners, actual.disable_round_corners);
         assert_eq!(expected.zone_color, actual.zone_color);
         assert_eq!(expected.zone_border_color, actual.zone_border_color);
         assert_eq!(expected.zone_highlight_color, actual.zone_highlight_color);
+        assert_eq!(expected.zone_number_color, actual.zone_number_color);
         assert_eq!(expected.zone_highlight_opacity, actual.zone_highlight_opacity);
         assert_eq!(expected.excluded_apps, actual.excluded_apps);
         assert_eq!(expected.excluded_apps_array, actual.excluded_apps_array);
@@ -165,6 +197,7 @@ mod tests {
         let json = serde_json::json!({
             "fancyzones_shiftDrag": expected.shift_drag,
             "fancyzones_mouseSwitch": expected.mouse_switch,
+            "fancyzones_mouseMiddleClickSpanningMultipleZones": expected.mouse_middle_click_spanning_multiple_zones,
             "fancyzones_displayOrWorkAreaChange_moveWindows": expected.display_or_work_area_change_move_windows,
             "fancyzones_zoneSetChange_flashZones": expected.zone_set_change_flash_zones,
             "fancyzones_zoneSetChange_moveWindows": expected.zone_set_change_move_windows,
@@ -176,12 +209,19 @@ mod tests {
             "fancyzones_restoreSize": expected.restore_size,
             "use_cursorpos_editor_startupscreen": expected.use_cursorpos_editor_startupscreen,
             "fancyzones_show_on_all_monitors": expected.show_zones_on_all_monitors,
-            "fancyzones_multi_monitor_mode": expected.span_zones_across_monitors,
+            "fancyzones_span_zones_across_monitors": expected.span_zones_across_monitors,
             "fancyzones_makeDraggedWindowTransparent": expected.make_dragged_window_transparent,
             "fancyzones_windowSwitching": expected.window_switching,
+            "fancyzones_quickLayoutSwitch": expected.quick_layout_switch,
+            "fancyzones_flashZonesOnQuickSwitch": expected.flash_zones_on_quick_switch,
+            "fancyzones_systemTheme": expected.system_theme,
+            "fancyzones_showZoneNumber": expected.show_zone_number,
+            "fancyzones_allowChildWindowSnap": expected.allow_snap_child_windows,
+            "fancyzones_disableRoundCornersOnSnap": expected.disable_round_corners,
             "fancyzones_zoneColor": expected.zone_color,
             "fancyzones_zoneBorderColor": expected.zone_border_color,
             "fancyzones_zoneHighlightColor": expected.zone_highlight_color,
+            "fancyzones_zoneNumberColor": expected.zone_number_color,
             "fancyzones_highlight_opacity": expected.zone_highlight_opacity,
             "fancyzones_excluded_apps": expected.excluded_apps,
         });
