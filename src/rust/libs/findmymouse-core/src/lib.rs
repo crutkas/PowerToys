@@ -12,3 +12,4 @@ pub mod types;
 pub mod detector;
 pub mod shake_detector;
 pub mod settings;
+pub mod activation_guard;
