@@ -1,6 +1,6 @@
 # PowerToys Rust Port — TODO
 
-*Last updated: 2026-04-11 21:48 UTC*
+*Last updated: 2026-04-12 06:00 UTC*
 
 ## 🔴 Bug Tracker (test-first methodology)
 
@@ -110,9 +110,11 @@ MeasureTool, CursorWrap, MouseHighlighter, FindMyMouse, Crosshairs.
 - [x] TopologyTests.cpp (16) in CursorWrap/UnitTests
 - [x] HighlighterTests.cpp (14) in MouseHighlighter/UnitTests
 - [x] CrosshairsTests.cpp (25) in MousePointerCrosshairs/UnitTests
-- [x] LightSwitchTests.cpp (46) in LightSwitch/UnitTests
-- [x] PowerAccentTests.cpp (32) in poweraccent/UnitTests
-- [x] FileLocksmithTests.cpp (33) in FileLocksmith/UnitTests
+- [x] FindMyMouseTests.cpp (22) in FindMyMouse/UnitTests — shake detection + activation guard
+- [x] MeasureToolTests.cpp (39) in MeasureTool/UnitTests — edge detection, unit conversion, BGRA
+- [x] LightSwitchTests.cpp (48) in LightSwitch/UnitTests
+- [x] PowerAccentTests.cpp (40) in poweraccent/UnitTests — includes OSK repeat issue #36853
+- [x] FileLocksmithTests.cpp (38) in FileLocksmith/UnitTests
 
 ### Future
 - [ ] ZoomIt (all tiers — after PT core is done)
@@ -143,8 +145,8 @@ MeasureTool, CursorWrap, MouseHighlighter, FindMyMouse, Crosshairs.
 | Awake RAM | ~50 MB | 6.1 MB WS / 0.9 MB priv |
 | Runner RAM (private) | 87.5 MB | 47 MB |
 | Rust core logic crates | 0 | 15 |
-| Rust tests | 0 | 790 |
-| C++ MSTest parity tests | 0 | 279 |
+| Rust tests | 0 | 858 |
+| C++ MSTest parity tests (new) | 0 | 340 |
 | App EXEs (Rust) | 0 | 10+ |
 | Release opt level | size (z) | **performance (3)** |
 
