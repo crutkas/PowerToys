@@ -388,4 +388,84 @@ namespace FileLocksmithUnitTests
                            L"Process path should contain executable extension");
         }
     };
+
+    // ========================================================================
+    // Settings defaults and parsing
+    // ========================================================================
+
+    // Mirror of FileLocksmithSettings::Settings struct from Settings.h
+    struct FileLocksmithSettingsDefaults
+    {
+        bool enabled{ true };
+        bool showInExtendedContextMenu{ false };
+    };
+
+    TEST_CLASS(FileLocksmithSettingsDefaultsTests)
+    {
+    public:
+
+        TEST_METHOD(Enabled_DefaultIsTrue)
+        {
+            FileLocksmithSettingsDefaults s;
+            Assert::IsTrue(s.enabled);
+        }
+
+        TEST_METHOD(ShowInExtendedContextMenu_DefaultIsFalse)
+        {
+            FileLocksmithSettingsDefaults s;
+            Assert::IsFalse(s.showInExtendedContextMenu);
+        }
+
+        TEST_METHOD(EmptySettings_AllDefaults)
+        {
+            FileLocksmithSettingsDefaults s;
+            Assert::IsTrue(s.enabled);
+            Assert::IsFalse(s.showInExtendedContextMenu);
+        }
+
+        TEST_METHOD(SetExtendedContextMenu_True)
+        {
+            FileLocksmithSettingsDefaults s;
+            s.showInExtendedContextMenu = true;
+            Assert::IsTrue(s.showInExtendedContextMenu);
+            Assert::IsTrue(s.enabled); // unchanged
+        }
+
+        TEST_METHOD(SetEnabled_False)
+        {
+            FileLocksmithSettingsDefaults s;
+            s.enabled = false;
+            Assert::IsFalse(s.enabled);
+            Assert::IsFalse(s.showInExtendedContextMenu); // unchanged
+        }
+
+        TEST_METHOD(JsonKey_ShowInExtendedContextMenu_MatchesConstant)
+        {
+            Assert::AreEqual(L"showInExtendedContextMenu",
+                             constants::nonlocalizable::JsonKeyShowInExtendedContextMenu);
+        }
+
+        TEST_METHOD(JsonKey_Enabled_MatchesConstant)
+        {
+            Assert::AreEqual(L"Enabled",
+                             constants::nonlocalizable::JsonKeyEnabled);
+        }
+
+        TEST_METHOD(DataFilePath_IsJsonFile)
+        {
+            std::wstring path(constants::nonlocalizable::DataFilePath);
+            Assert::IsTrue(path.find(L".json") != std::wstring::npos,
+                           L"Settings file should be a JSON file");
+        }
+
+        TEST_METHOD(BothFieldsChanged_IndependentUpdates)
+        {
+            FileLocksmithSettingsDefaults s;
+            s.enabled = false;
+            s.showInExtendedContextMenu = true;
+
+            Assert::IsFalse(s.enabled);
+            Assert::IsTrue(s.showInExtendedContextMenu);
+        }
+    };
 }

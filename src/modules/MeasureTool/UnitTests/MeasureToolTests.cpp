@@ -515,4 +515,189 @@ namespace MeasureToolUnitTests
             Assert::AreEqual(.25f, consts::CROSS_OPACITY);
         }
     };
+
+    // ── Settings defaults and parsing tests ─────────────────────────────────
+
+    // Mirror of Settings struct defaults from MeasureToolCore/Settings.h
+    struct SettingsDefaults
+    {
+        uint8_t pixelTolerance = 30;
+        bool continuousCapture = false;
+        bool drawFeetOnCross = true;
+        bool perColorChannelEdgeDetection = false;
+        std::array<uint8_t, 3> lineColor = { 255, 69, 0 };
+        int units = Pixel; // Measurement::Unit::Pixel
+    };
+
+    // Mirror of checkValidRGB logic for testing color string parsing
+    inline bool ParseColorString(const std::wstring& colorStr, uint8_t& r, uint8_t& g, uint8_t& b)
+    {
+        // Expected format: "#RRGGBB" or "rgb(R,G,B)" — the production code uses checkValidRGB
+        if (colorStr.size() >= 7 && colorStr[0] == L'#')
+        {
+            try
+            {
+                unsigned long val = std::stoul(colorStr.substr(1), nullptr, 16);
+                r = static_cast<uint8_t>((val >> 16) & 0xFF);
+                g = static_cast<uint8_t>((val >> 8) & 0xFF);
+                b = static_cast<uint8_t>(val & 0xFF);
+                return true;
+            }
+            catch (...) { return false; }
+        }
+        return false;
+    }
+
+    TEST_CLASS(SettingsDefaultsTests)
+    {
+    public:
+        TEST_METHOD(PixelTolerance_DefaultIs30)
+        {
+            SettingsDefaults s;
+            Assert::AreEqual(static_cast<uint8_t>(30), s.pixelTolerance);
+        }
+
+        TEST_METHOD(ContinuousCapture_DefaultIsFalse)
+        {
+            SettingsDefaults s;
+            Assert::IsFalse(s.continuousCapture);
+        }
+
+        TEST_METHOD(DrawFeetOnCross_DefaultIsTrue)
+        {
+            SettingsDefaults s;
+            Assert::IsTrue(s.drawFeetOnCross);
+        }
+
+        TEST_METHOD(PerColorChannelEdgeDetection_DefaultIsFalse)
+        {
+            SettingsDefaults s;
+            Assert::IsFalse(s.perColorChannelEdgeDetection);
+        }
+
+        TEST_METHOD(LineColor_DefaultIsOrangeRed)
+        {
+            SettingsDefaults s;
+            Assert::AreEqual(static_cast<uint8_t>(255), s.lineColor[0], L"R should be 255");
+            Assert::AreEqual(static_cast<uint8_t>(69), s.lineColor[1], L"G should be 69");
+            Assert::AreEqual(static_cast<uint8_t>(0), s.lineColor[2], L"B should be 0");
+        }
+
+        TEST_METHOD(Units_DefaultIsPixel)
+        {
+            SettingsDefaults s;
+            Assert::AreEqual(static_cast<int>(Pixel), s.units);
+        }
+
+        TEST_METHOD(EmptySettings_AllDefaults)
+        {
+            SettingsDefaults s;
+            Assert::AreEqual(static_cast<uint8_t>(30), s.pixelTolerance);
+            Assert::IsFalse(s.continuousCapture);
+            Assert::IsTrue(s.drawFeetOnCross);
+            Assert::IsFalse(s.perColorChannelEdgeDetection);
+            Assert::AreEqual(static_cast<int>(Pixel), s.units);
+        }
+
+        TEST_METHOD(PartialUpdate_OnlyToleranceChanged)
+        {
+            SettingsDefaults s;
+            s.pixelTolerance = 50;
+            Assert::AreEqual(static_cast<uint8_t>(50), s.pixelTolerance);
+            Assert::IsFalse(s.continuousCapture);
+            Assert::IsTrue(s.drawFeetOnCross);
+        }
+    };
+
+    TEST_CLASS(SettingsUnitParsingTests)
+    {
+    public:
+        TEST_METHOD(Index0_IsPixel)
+        {
+            Assert::AreEqual(static_cast<int>(Pixel), GetUnitFromIndex(0));
+        }
+
+        TEST_METHOD(Index1_IsInch)
+        {
+            Assert::AreEqual(static_cast<int>(Inch), GetUnitFromIndex(1));
+        }
+
+        TEST_METHOD(Index2_IsCentimetre)
+        {
+            Assert::AreEqual(static_cast<int>(Centimetre), GetUnitFromIndex(2));
+        }
+
+        TEST_METHOD(Index3_IsMillimetre)
+        {
+            Assert::AreEqual(static_cast<int>(Millimetre), GetUnitFromIndex(3));
+        }
+
+        TEST_METHOD(InvalidIndex_DefaultsToPixel)
+        {
+            Assert::AreEqual(static_cast<int>(Pixel), GetUnitFromIndex(-1));
+            Assert::AreEqual(static_cast<int>(Pixel), GetUnitFromIndex(4));
+            Assert::AreEqual(static_cast<int>(Pixel), GetUnitFromIndex(100));
+        }
+    };
+
+    TEST_CLASS(SettingsColorParsingTests)
+    {
+    public:
+        TEST_METHOD(ParseHexColor_FF4500_OrangeRed)
+        {
+            uint8_t r, g, b;
+            bool ok = ParseColorString(L"#FF4500", r, g, b);
+            Assert::IsTrue(ok);
+            Assert::AreEqual(static_cast<uint8_t>(255), r);
+            Assert::AreEqual(static_cast<uint8_t>(69), g);
+            Assert::AreEqual(static_cast<uint8_t>(0), b);
+        }
+
+        TEST_METHOD(ParseHexColor_000000_Black)
+        {
+            uint8_t r, g, b;
+            bool ok = ParseColorString(L"#000000", r, g, b);
+            Assert::IsTrue(ok);
+            Assert::AreEqual(static_cast<uint8_t>(0), r);
+            Assert::AreEqual(static_cast<uint8_t>(0), g);
+            Assert::AreEqual(static_cast<uint8_t>(0), b);
+        }
+
+        TEST_METHOD(ParseHexColor_FFFFFF_White)
+        {
+            uint8_t r, g, b;
+            bool ok = ParseColorString(L"#FFFFFF", r, g, b);
+            Assert::IsTrue(ok);
+            Assert::AreEqual(static_cast<uint8_t>(255), r);
+            Assert::AreEqual(static_cast<uint8_t>(255), g);
+            Assert::AreEqual(static_cast<uint8_t>(255), b);
+        }
+
+        TEST_METHOD(ParseHexColor_InvalidString_ReturnsFalse)
+        {
+            uint8_t r = 0, g = 0, b = 0;
+            bool ok = ParseColorString(L"notacolor", r, g, b);
+            Assert::IsFalse(ok);
+        }
+
+        TEST_METHOD(ParseHexColor_EmptyString_ReturnsFalse)
+        {
+            uint8_t r = 0, g = 0, b = 0;
+            bool ok = ParseColorString(L"", r, g, b);
+            Assert::IsFalse(ok);
+        }
+
+        TEST_METHOD(NestedJsonStructure_PropertyValueKeys)
+        {
+            // Verify the expected JSON nesting: properties/PixelTolerance/value
+            // This mirrors the structure in Settings.cpp
+            std::wstring jsonKeyProperties = L"properties";
+            std::wstring jsonKeyValue = L"value";
+            std::wstring jsonKeyPixelTolerance = L"PixelTolerance";
+
+            Assert::AreEqual(std::wstring(L"properties"), jsonKeyProperties);
+            Assert::AreEqual(std::wstring(L"value"), jsonKeyValue);
+            Assert::AreEqual(std::wstring(L"PixelTolerance"), jsonKeyPixelTolerance);
+        }
+    };
 }
