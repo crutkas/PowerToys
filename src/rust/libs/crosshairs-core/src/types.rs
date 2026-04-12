@@ -37,6 +37,10 @@ pub struct Settings {
     pub is_fixed_length_enabled: bool,
     pub fixed_length: i32,
     pub orientation: CrosshairsOrientation,
+    /// When `true`, the crosshair position is driven externally instead of
+    /// following the mouse hook — mirrors C++ `SetExternalControl(bool)`.
+    #[serde(default)]
+    pub external_control: bool,
 }
 
 impl Default for Settings {
@@ -52,6 +56,7 @@ impl Default for Settings {
             is_fixed_length_enabled: false,
             fixed_length: 1,
             orientation: CrosshairsOrientation::Both,
+            external_control: false,
         }
     }
 }

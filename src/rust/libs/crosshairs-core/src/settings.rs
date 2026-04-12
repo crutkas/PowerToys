@@ -75,6 +75,9 @@ pub fn parse_settings(json: &str) -> Result<Settings, String> {
             settings.border_color = c;
         }
     }
+    if let Some(v) = bool_val("crosshairs_external_control") {
+        settings.external_control = v;
+    }
 
     Ok(settings)
 }
@@ -160,5 +163,19 @@ mod tests {
         let json = r##"{ "properties": { "crosshairs_color": { "value": "#0000FF" } } }"##;
         let s = parse_settings(json).unwrap();
         assert_eq!(s.color, Color { a: 255, r: 0, g: 0, b: 255 });
+    }
+
+    #[test]
+    fn parse_external_control_true() {
+        let json = r#"{ "properties": { "crosshairs_external_control": { "value": true } } }"#;
+        let s = parse_settings(json).unwrap();
+        assert!(s.external_control);
+    }
+
+    #[test]
+    fn parse_external_control_default_false() {
+        let json = r#"{ "properties": {} }"#;
+        let s = parse_settings(json).unwrap();
+        assert!(!s.external_control);
     }
 }

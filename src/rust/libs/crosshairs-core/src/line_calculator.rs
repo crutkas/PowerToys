@@ -1,5 +1,27 @@
 use crate::types::{CrosshairsOrientation, Settings};
 
+/// Source of cursor position — either from the mouse hook or externally provided.
+///
+/// Mirrors the C++ `SetExternalControl(bool)` flag: when external control is
+/// active the WH_MOUSE_LL hook is unhooked and position is provided by an
+/// external caller.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum CursorSource {
+    /// Position reported by the low-level mouse hook (normal mode).
+    Hook { x: i32, y: i32 },
+    /// Position provided by an external module (external-control mode).
+    External { x: i32, y: i32 },
+}
+
+impl CursorSource {
+    /// Extract the (x, y) pair regardless of source.
+    pub fn position(&self) -> (i32, i32) {
+        match *self {
+            CursorSource::Hook { x, y } | CursorSource::External { x, y } => (x, y),
+        }
+    }
+}
+
 /// Axis-aligned rectangle used for crosshair line segments.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Rect {
@@ -182,6 +204,21 @@ pub fn calculate_crosshair_layout(
         top_border,
         bottom_border,
     }
+}
+
+/// Extended layout calculation that accepts a [`CursorSource`].
+///
+/// When `settings.external_control` is `true` callers should pass
+/// `CursorSource::External`; when `false`, `CursorSource::Hook`.
+/// The resulting layout is identical — the distinction exists so
+/// upper layers can assert correctness at the call-site.
+pub fn calculate_crosshair_layout_ext(
+    cursor: CursorSource,
+    screen_bounds: ScreenBounds,
+    settings: &Settings,
+) -> CrosshairLayout {
+    let (x, y) = cursor.position();
+    calculate_crosshair_layout(x, y, screen_bounds, settings)
 }
 
 #[cfg(test)]
@@ -475,5 +512,63 @@ mod tests {
     #[test]
     fn opacity_50_percent() {
         assert_eq!(opacity_to_normalized(50), 0.5);
+    }
+
+    // ---- external control mode ----
+
+    #[test]
+    fn external_control_layout_matches_hook_layout() {
+        let settings = even_settings();
+        let hook = calculate_crosshair_layout(500, 500, screen_1000(), &settings);
+        let ext = calculate_crosshair_layout_ext(
+            CursorSource::External { x: 500, y: 500 },
+            screen_1000(),
+            &settings,
+        );
+        assert_eq!(hook, ext);
+    }
+
+    #[test]
+    fn external_control_different_position() {
+        let settings = even_settings();
+        let ext_a = calculate_crosshair_layout_ext(
+            CursorSource::External { x: 100, y: 100 },
+            screen_1000(),
+            &settings,
+        );
+        let ext_b = calculate_crosshair_layout_ext(
+            CursorSource::External { x: 800, y: 800 },
+            screen_1000(),
+            &settings,
+        );
+        // Different positions must produce different layouts
+        assert_ne!(ext_a, ext_b);
+    }
+
+    #[test]
+    fn cursor_source_position_hook() {
+        let src = CursorSource::Hook { x: 42, y: 99 };
+        assert_eq!(src.position(), (42, 99));
+    }
+
+    #[test]
+    fn cursor_source_position_external() {
+        let src = CursorSource::External { x: 7, y: 13 };
+        assert_eq!(src.position(), (7, 13));
+    }
+
+    #[test]
+    fn external_control_flag_default_false() {
+        let s = Settings::default();
+        assert!(!s.external_control);
+    }
+
+    #[test]
+    fn external_control_flag_enables() {
+        let s = Settings {
+            external_control: true,
+            ..Settings::default()
+        };
+        assert!(s.external_control);
     }
 }

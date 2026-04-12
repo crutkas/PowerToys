@@ -109,6 +109,27 @@ impl Settings {
             }
         }
     }
+
+    /// Returns `true` when PowerAccent should activate given the current
+    /// game-mode state and foreground application.
+    ///
+    /// Mirrors the C++ `PowerAccentKeyboardService` checks:
+    /// - `SHQueryUserNotificationState()` game-mode detection
+    /// - excluded-apps list
+    pub fn should_activate(&self, is_game_mode: bool, foreground_app: &str) -> bool {
+        if self.do_not_activate_on_game_mode && is_game_mode {
+            return false;
+        }
+
+        let app_lower = foreground_app.to_lowercase();
+        for excluded in &self.excluded_apps {
+            if !excluded.is_empty() && app_lower == excluded.to_lowercase() {
+                return false;
+            }
+        }
+
+        true
+    }
 }
 
 #[cfg(test)]
@@ -152,6 +173,92 @@ mod tests {
         assert!(!s.is_trigger_allowed(TriggerKey::Space));
         assert!(s.is_trigger_allowed(TriggerKey::Left));
         assert!(s.is_trigger_allowed(TriggerKey::Right));
+    }
+
+    // --- should_activate tests ---
+
+    #[test]
+    fn should_activate_default_no_game_mode() {
+        let s = Settings::default();
+        assert!(s.should_activate(false, "notepad.exe"));
+    }
+
+    #[test]
+    fn should_activate_blocks_game_mode_when_enabled() {
+        let s = Settings {
+            do_not_activate_on_game_mode: true,
+            ..Default::default()
+        };
+        assert!(!s.should_activate(true, "notepad.exe"));
+    }
+
+    #[test]
+    fn should_activate_allows_game_mode_when_disabled() {
+        let s = Settings {
+            do_not_activate_on_game_mode: false,
+            ..Default::default()
+        };
+        assert!(s.should_activate(true, "notepad.exe"));
+    }
+
+    #[test]
+    fn should_activate_blocks_excluded_app() {
+        let s = Settings {
+            excluded_apps: vec!["game.exe".to_string()],
+            ..Default::default()
+        };
+        assert!(!s.should_activate(false, "game.exe"));
+    }
+
+    #[test]
+    fn should_activate_excluded_app_case_insensitive() {
+        let s = Settings {
+            excluded_apps: vec!["Game.EXE".to_string()],
+            ..Default::default()
+        };
+        assert!(!s.should_activate(false, "game.exe"));
+        assert!(!s.should_activate(false, "GAME.EXE"));
+    }
+
+    #[test]
+    fn should_activate_allows_non_excluded_app() {
+        let s = Settings {
+            excluded_apps: vec!["game.exe".to_string()],
+            ..Default::default()
+        };
+        assert!(s.should_activate(false, "notepad.exe"));
+    }
+
+    #[test]
+    fn should_activate_empty_excluded_list() {
+        let s = Settings::default();
+        assert!(s.should_activate(false, "anything.exe"));
+    }
+
+    #[test]
+    fn should_activate_skips_empty_entries() {
+        let s = Settings {
+            excluded_apps: vec!["".to_string(), "game.exe".to_string()],
+            ..Default::default()
+        };
+        // Empty entry should not match empty foreground app string
+        assert!(s.should_activate(false, "notepad.exe"));
+        assert!(!s.should_activate(false, "game.exe"));
+    }
+
+    #[test]
+    fn should_activate_both_game_mode_and_excluded() {
+        let s = Settings {
+            do_not_activate_on_game_mode: true,
+            excluded_apps: vec!["game.exe".to_string()],
+            ..Default::default()
+        };
+        // Game mode alone blocks
+        assert!(!s.should_activate(true, "notepad.exe"));
+        // Excluded app alone blocks
+        assert!(!s.should_activate(false, "game.exe"));
+        // Both block
+        assert!(!s.should_activate(true, "game.exe"));
     }
 
     #[test]
