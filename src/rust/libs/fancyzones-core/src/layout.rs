@@ -8,6 +8,15 @@ use crate::zone::{Zone, ZoneIndex, ZoneIndexSet};
 /// Mapping zone id to zone, ordered by index.
 pub type ZonesMap = BTreeMap<ZoneIndex, Zone>;
 
+/// A single zone from a canvas layout definition (pre-DPI-scaling).
+#[derive(Debug, Clone, Copy)]
+pub struct CanvasZone {
+    pub x: i32,
+    pub y: i32,
+    pub width: i32,
+    pub height: i32,
+}
+
 /// Layout data used to initialize a layout.
 #[derive(Debug, Clone)]
 pub struct LayoutData {
@@ -75,6 +84,47 @@ impl Layout {
             self.zones.insert(i as ZoneIndex, zone);
         }
         true
+    }
+
+    /// Initialize from canvas layout JSON data with DPI scaling.
+    /// Matches C++ LayoutConfigurator::CalculateCustomLayout exactly:
+    /// 1. DPIAware::InverseConvert the work area (physical → logical)
+    /// 2. Scale zones proportionally from reference dimensions
+    /// 3. DPIAware::Convert the result (logical → physical)
+    pub fn init_canvas(
+        &mut self,
+        canvas_zones: &[CanvasZone],
+        ref_width: i32,
+        ref_height: i32,
+        work_area: Rect,
+        dpi: u32,
+    ) -> bool {
+        let dpi_f = dpi as f64;
+        // Step 1: Convert work area to logical pixels (DPIAware::InverseConvert)
+        let logical_w = (work_area.width() as f64 * 96.0 / dpi_f).round() as i32;
+        let logical_h = (work_area.height() as f64 * 96.0 / dpi_f).round() as i32;
+
+        // Scale factor from reference resolution to current logical resolution
+        let scale_x = if ref_width > 0 { logical_w as f64 / ref_width as f64 } else { 1.0 };
+        let scale_y = if ref_height > 0 { logical_h as f64 / ref_height as f64 } else { 1.0 };
+
+        let mut zones = Vec::with_capacity(canvas_zones.len());
+        for cz in canvas_zones {
+            // Scale zone to logical pixels
+            let x = (cz.x as f64 * scale_x).round() as i32;
+            let y = (cz.y as f64 * scale_y).round() as i32;
+            let w = (cz.width as f64 * scale_x).round() as i32;
+            let h = (cz.height as f64 * scale_y).round() as i32;
+
+            // Step 3: Convert back to physical pixels (DPIAware::Convert)
+            let phys_x = (x as f64 * dpi_f / 96.0).round() as i32 + work_area.left;
+            let phys_y = (y as f64 * dpi_f / 96.0).round() as i32 + work_area.top;
+            let phys_w = (w as f64 * dpi_f / 96.0).round() as i32;
+            let phys_h = (h as f64 * dpi_f / 96.0).round() as i32;
+
+            zones.push(Rect::new(phys_x, phys_y, phys_x + phys_w, phys_y + phys_h));
+        }
+        self.init_custom(zones)
     }
 
     pub fn id(&self) -> &str {
@@ -899,5 +949,103 @@ mod tests {
                 check_zones(&layout, lt, zone_count as usize, rect);
             }
         }
+    }
+
+    // ── DPI canvas layout tests ──────────────────────────────────────────
+
+    fn make_canvas_layout() -> Layout {
+        Layout::new(LayoutData {
+            uuid: "canvas-test".into(),
+            layout_type: ZoneSetLayoutType::Custom,
+            show_spacing: false,
+            spacing: 0,
+            zone_count: 2,
+            sensitivity_radius: 20,
+        })
+    }
+
+    #[test]
+    fn canvas_dpi_100_identity() {
+        let mut layout = make_canvas_layout();
+        let zones = vec![
+            CanvasZone { x: 0, y: 0, width: 960, height: 1080 },
+            CanvasZone { x: 960, y: 0, width: 960, height: 1080 },
+        ];
+        let work_area = Rect::new(0, 0, 1920, 1080);
+        assert!(layout.init_canvas(&zones, 1920, 1080, work_area, 96));
+        let z0 = layout.zones()[&0].get_zone_rect();
+        assert_eq!(z0, Rect::new(0, 0, 960, 1080));
+    }
+
+    #[test]
+    fn canvas_dpi_150_scales_up() {
+        let mut layout = make_canvas_layout();
+        let zones = vec![
+            CanvasZone { x: 0, y: 0, width: 960, height: 1080 },
+            CanvasZone { x: 960, y: 0, width: 960, height: 1080 },
+        ];
+        // At 150% DPI (144dpi), physical resolution is 2880x1620
+        let work_area = Rect::new(0, 0, 2880, 1620);
+        assert!(layout.init_canvas(&zones, 1920, 1080, work_area, 144));
+        let z0 = layout.zones()[&0].get_zone_rect();
+        assert_eq!(z0, Rect::new(0, 0, 1440, 1620));
+        let z1 = layout.zones()[&1].get_zone_rect();
+        assert_eq!(z1, Rect::new(1440, 0, 2880, 1620));
+    }
+
+    #[test]
+    fn canvas_dpi_200_4k() {
+        // Canvas designed at 1920x1080 logical, displayed on 3840x2160 at 200%
+        let zones = vec![
+            CanvasZone { x: 100, y: 50, width: 800, height: 500 },
+        ];
+        let work_area = Rect::new(0, 0, 3840, 2160);
+        let mut layout = Layout::new(LayoutData {
+            uuid: "".into(),
+            layout_type: ZoneSetLayoutType::Custom,
+            show_spacing: false, spacing: 0, zone_count: 1, sensitivity_radius: 20,
+        });
+        assert!(layout.init_canvas(&zones, 1920, 1080, work_area, 192));
+        let z = layout.zones()[&0].get_zone_rect();
+        // At 200%: logical work area = 1920x1080, scale = 1.0
+        // Zone stays same in logical, then converts to physical: *2
+        assert_eq!(z, Rect::new(200, 100, 1800, 1100));
+    }
+
+    #[test]
+    fn canvas_cross_resolution_scaling() {
+        // Canvas designed at 2560x1440, displayed on 1920x1080@100%
+        let zones = vec![
+            CanvasZone { x: 0, y: 0, width: 1280, height: 1440 },
+        ];
+        let work_area = Rect::new(0, 0, 1920, 1080);
+        let mut layout = Layout::new(LayoutData {
+            uuid: "".into(),
+            layout_type: ZoneSetLayoutType::Custom,
+            show_spacing: false, spacing: 0, zone_count: 1, sensitivity_radius: 20,
+        });
+        assert!(layout.init_canvas(&zones, 2560, 1440, work_area, 96));
+        let z = layout.zones()[&0].get_zone_rect();
+        assert_eq!(z, Rect::new(0, 0, 960, 1080));
+    }
+
+    #[test]
+    fn canvas_with_work_area_offset() {
+        let zones = vec![
+            CanvasZone { x: 0, y: 0, width: 500, height: 500 },
+        ];
+        // Work area offset (e.g., taskbar at left)
+        let work_area = Rect::new(100, 50, 2020, 1130);
+        let mut layout = Layout::new(LayoutData {
+            uuid: "".into(),
+            layout_type: ZoneSetLayoutType::Custom,
+            show_spacing: false, spacing: 0, zone_count: 1, sensitivity_radius: 20,
+        });
+        assert!(layout.init_canvas(&zones, 1920, 1080, work_area, 96));
+        let z = layout.zones()[&0].get_zone_rect();
+        assert_eq!(z.left, 100);
+        assert_eq!(z.top, 50);
+        assert_eq!(z.right, 600);
+        assert_eq!(z.bottom, 550);
     }
 }
