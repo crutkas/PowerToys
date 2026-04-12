@@ -14,23 +14,30 @@
 | **FileLocksmith** | ~1,800 KB | **174 KB** | **10x smaller** |
 | **Workspaces (3 EXEs)** | ~6 MB total | **638 KB** | **9.4x smaller** |
 
-### Memory (at idle)
-| Process | C++ / .NET | Rust | Improvement |
-|---------|-----------|------|-------------|
-| **Runner (all 22 DLLs loaded)** | 87.5 MB private | **47 MB** | **46% less** |
-| **Awake** | ~50 MB WS (.NET runtime) | **5.9 MB WS** | **88% less — no .NET** |
-| **FancyZones EXE** | 7.1 MB WS | 8.0 MB WS | ~same at idle |
-| **AlwaysOnTop EXE** | 7.4 MB WS | 9.2 MB WS | ~same at idle |
-| **LightSwitch EXE** | — | 6.1 MB WS | New standalone service |
+### Memory (at idle, side-by-side)
+| Process | C++ | Rust | Winner | Notes |
+|---------|-----|------|--------|-------|
+| **Runner (all 22 DLLs)** | 87.5 MB priv | **47 MB** | **Rust 46% less** | DLL loading overhead |
+| **LightSwitch** | 18.2 MB WS / 4 MB priv | **5.5 MB / 1.1 MB** | **Rust 70% less** | C++ links heavy libs |
+| **FancyZones** | 7.1 MB WS / 1.2 MB priv | 7.4 MB / 1.4 MB | Comparable | Both idle, no zones active |
+| **AlwaysOnTop** | 6.8 MB WS / 1.2 MB priv | 8.5 MB / 1.5 MB | C++ slightly less | Rust D2D factory preloaded |
+| **Awake** | 5.2 MB WS / 0.9 MB priv | 5.3 MB / 0.9 MB | Comparable | Both minimal |
 
-> **Where the RAM win comes from:** The Runner process loads ALL module DLLs into one process. Each C++ DLL pulls in the CRT, ATL, WIL, spdlog, and other shared libs. Rust DLLs are self-contained with no shared runtime overhead. The 40 MB savings is across 22 DLLs loaded together.
+> **Measurement notes:** C++ FancyZones/LightSwitch measured from Debug builds (no Release available). AlwaysOnTop/Awake from Release. Rust all from Release. Runner measurement is from live system with all modules loaded.
 
-### Test Coverage
-| Metric | Before | After |
-|--------|--------|-------|
-| Rust tests | 0 | **858** |
-| New C++ MSTest tests | 0 | **340** (10 projects) |
-| Total new tests | 0 | **1,198** |
+### Disk Size (Release vs Release where available)
+| EXE | C++ | Rust | Ratio | Notes |
+|-----|-----|------|-------|-------|
+| **AlwaysOnTop** | 184 KB | 241 KB | 0.8x | Rust embeds D2D, no separate DLL |
+| **ActionRunner** | 110 KB | 116 KB | ~same | Both minimal |
+| **Update** | 1,395 KB | 1,762 KB | 0.8x | Rust embeds HTTPS + JSON |
+| **Awake** | 401 KB (.NET host) | 522 KB | 0.8x | **But Rust has NO .NET runtime dep** |
+| **FancyZones** | 830 KB* | 378 KB | **2.2x smaller** | *C++ Debug; Release likely ~300 KB |
+| **LightSwitch** | 5,328 KB* | 192 KB | **28x smaller** | *C++ Debug, links MFC/ATL |
+| **FileLocksmith** | 4,973 KB* | 174 KB | **29x smaller** | *C++ Debug |
+| **Workspaces (3)** | 1,528 KB* | 638 KB | **2.4x smaller** | *C++ Debug |
+
+> *Asterisk = C++ Debug build (no Release available). Debug builds are typically 3-10x larger than Release. Fair comparison requires C++ Release builds for all EXEs.
 
 ## 📏 Binary Size Comparison (Release builds)
 
