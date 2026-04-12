@@ -4,14 +4,33 @@
 
 ## 🎉 Headline Wins
 
+### Disk Size
 | What | Before | After | Improvement |
 |------|--------|-------|-------------|
-| **22 module DLLs total size** | 74.4 MB | **2.9 MB** | **25x smaller** |
-| **10 app EXEs total size** | ~30 MB+ | **4.0 MB** | **7x smaller** |
-| **Runner RAM (private)** | 87.5 MB | **47 MB** | **46% less** |
-| **AlwaysOnTop RAM** | 54 MB WS / 40 MB priv | **7.9 MB / 1.3 MB** | **97% less** |
-| **Awake RAM** | ~50 MB (.NET) | **6.1 MB / 0.9 MB** | **88% less** |
-| **Test coverage** | 0 Rust | **858 Rust + 340 C++ MSTest** | **1,198 new tests** |
+| **22 module DLLs total** | 74.4 MB | **2.9 MB** | **25x smaller** |
+| **10 app EXEs total** | ~30 MB+ | **4.0 MB** | **7x smaller** |
+| **FancyZones EXE** | 830 KB + FancyZonesLib.dll | **378 KB** | Logic embedded, no separate DLL |
+| **LightSwitch** | ~1,200 KB (.NET+C++) | **192 KB** | **6x smaller, no runtime** |
+| **FileLocksmith** | ~1,800 KB | **174 KB** | **10x smaller** |
+| **Workspaces (3 EXEs)** | ~6 MB total | **638 KB** | **9.4x smaller** |
+
+### Memory (at idle)
+| Process | C++ / .NET | Rust | Improvement |
+|---------|-----------|------|-------------|
+| **Runner (all 22 DLLs loaded)** | 87.5 MB private | **47 MB** | **46% less** |
+| **Awake** | ~50 MB WS (.NET runtime) | **5.9 MB WS** | **88% less — no .NET** |
+| **FancyZones EXE** | 7.1 MB WS | 8.0 MB WS | ~same at idle |
+| **AlwaysOnTop EXE** | 7.4 MB WS | 9.2 MB WS | ~same at idle |
+| **LightSwitch EXE** | — | 6.1 MB WS | New standalone service |
+
+> **Where the RAM win comes from:** The Runner process loads ALL module DLLs into one process. Each C++ DLL pulls in the CRT, ATL, WIL, spdlog, and other shared libs. Rust DLLs are self-contained with no shared runtime overhead. The 40 MB savings is across 22 DLLs loaded together.
+
+### Test Coverage
+| Metric | Before | After |
+|--------|--------|-------|
+| Rust tests | 0 | **858** |
+| New C++ MSTest tests | 0 | **340** (10 projects) |
+| Total new tests | 0 | **1,198** |
 
 ## 📏 Binary Size Comparison (Release builds)
 
