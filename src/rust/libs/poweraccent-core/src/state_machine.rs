@@ -179,8 +179,11 @@ impl AccentStateMachine {
                 }
                 KeyResult::pass_through()
             }
-            // Ignore repeat / different letter while already tracking one
-            State::LetterHeld { .. } | State::AccentActive { .. } => KeyResult::pass_through(),
+            // Suppress repeated/different letter while accent picker is active
+            // (on-screen keyboard sends WM_KEYDOWN continuously while key held)
+            State::AccentActive { .. } => KeyResult::suppressed(vec![]),
+            // Ignore repeat while tracking but not yet active
+            State::LetterHeld { .. } => KeyResult::pass_through(),
         }
     }
 
@@ -547,5 +550,32 @@ mod tests {
         assert!(!r.suppress);
         // State should still be AccentActive
         assert!(sm.selected_char().is_some());
+    }
+
+    // --- OSK repeat suppression: repeated letter while accent picker visible ---
+    // https://github.com/microsoft/PowerToys/issues/36853
+    #[test]
+    fn osk_repeat_letter_suppressed_while_accent_active() {
+        let mut sm = make_sm();
+        sm.on_key_down(VK_A, 0, false);
+        sm.on_key_down(VK_SPACE, 50, false);
+        assert!(sm.selected_char().is_some()); // accent picker visible
+
+        // Repeated letter key (as OSK does continuously) must be suppressed
+        let r = sm.on_key_down(VK_A, 100, false);
+        assert!(r.suppress, "Repeated letter while accent active must be suppressed");
+        assert!(r.actions.is_empty(), "No actions needed for repeat suppression");
+    }
+
+    // --- Different letter while accent active is also suppressed ---
+    #[test]
+    fn different_letter_while_accent_active_suppressed() {
+        let mut sm = make_sm();
+        sm.on_key_down(VK_E, 0, false);
+        sm.on_key_down(VK_SPACE, 50, false);
+        assert!(sm.selected_char().is_some());
+
+        let r = sm.on_key_down(VK_A, 100, false);
+        assert!(r.suppress, "Different letter while accent active must be suppressed");
     }
 }
