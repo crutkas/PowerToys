@@ -837,7 +837,7 @@ namespace KeyboardEventHandlers
                         return 1;
                     }
 
-                    // Case 4: If a modifier key in the original shortcut is pressedthen suppress that key event since the original shortcut is already held down physically - This case can occur only if a user has a duplicated modifier key (possibly by remapping) or if user presses both L/R versions of a modifier remapped with "Both"
+                    // Case 4: If a modifier key in the original shortcut is pressed then suppress that key event since the original shortcut is already held down physically - This case can occur only if a user has a duplicated modifier key (possibly by remapping) or if user presses both L/R versions of a modifier remapped with "Both"
                     if ((it->first.CheckWinKey(data->lParam->vkCode) || it->first.CheckCtrlKey(data->lParam->vkCode) || it->first.CheckAltKey(data->lParam->vkCode) || it->first.CheckShiftKey(data->lParam->vkCode)) && (data->wParam == WM_KEYDOWN || data->wParam == WM_SYSKEYDOWN))
                     {
                         if (remapToShortcut)
@@ -1839,12 +1839,19 @@ namespace KeyboardEventHandlers
 
         if (!releaseEvents.empty())
         {
-            ii.SendVirtualInput(releaseEvents);
+            if (!ii.SendVirtualInput(releaseEvents))
+            {
+                // Modifier release failed — pass through original key to
+                // avoid injecting text with modifiers still held.
+                return 0;
+            }
         }
 
         Helpers::SendTextInput(*remapping);
 
-        // Re-press modifiers that were held before text injection
+        // Re-press modifiers that were held before text injection.
+        // Failure here is non-fatal — modifiers may stay released until
+        // the user physically releases and re-presses them.
         if (!releasedKeys.empty())
         {
             std::vector<INPUT> restoreEvents;

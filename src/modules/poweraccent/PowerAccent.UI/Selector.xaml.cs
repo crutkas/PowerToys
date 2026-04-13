@@ -54,6 +54,14 @@ public partial class Selector : FluentWindow, IDisposable, INotifyPropertyChange
         this.Visibility = Visibility.Hidden;
     }
 
+    protected override void OnDeactivated(EventArgs e)
+    {
+        base.OnDeactivated(e);
+        // Force-reset accent mode on focus loss to prevent stuck state
+        // (e.g., user Alt+Tabs during accent selection).
+        _powerAccent.ForceResetKeyboardState();
+    }
+
     private void PowerAccent_OnSelectionCharacter(int index, string character)
     {
         _selectedIndex = index;

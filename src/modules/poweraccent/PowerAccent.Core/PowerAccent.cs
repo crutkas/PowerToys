@@ -356,6 +356,11 @@ public partial class PowerAccent : IDisposable
         GC.SuppressFinalize(this);
     }
 
+    public void ForceResetKeyboardState()
+    {
+        _keyboardListener.ForceReset();
+    }
+
     public static string[] ToUpper(string[] array)
     {
         List<string> result = new(array.Length);

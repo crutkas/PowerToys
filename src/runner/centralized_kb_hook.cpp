@@ -100,10 +100,11 @@ namespace CentralizedKeyboardHook
             return CallNextHookEx(hHook, nCode, wParam, lParam);
         }
 
-        // Skip events injected by other processes (e.g. OSK, macro tools) that have
-        // LLKHF_INJECTED set but no dwExtraInfo. PowerToys' own injected events carry
-        // dwExtraInfo so they are handled above.
-        if ((keyPressInfo.flags & LLKHF_INJECTED) && keyPressInfo.dwExtraInfo == 0)
+        // Skip events injected by other processes (e.g. OSK, macro tools,
+        // AutoHotkey). PowerToys' own injected events carry our dwExtraInfo
+        // tag and are handled above — everything else with LLKHF_INJECTED
+        // should pass through without driving our state machines.
+        if (keyPressInfo.flags & LLKHF_INJECTED)
         {
             return CallNextHookEx(hHook, nCode, wParam, lParam);
         }
@@ -111,14 +112,13 @@ namespace CentralizedKeyboardHook
         // Check if the keys are pressed.
         if (!pressedKeyDescriptors.empty())
         {
+            std::unique_lock lock{ pressedKeyMutex };
             bool wasKeyPressed = vkCodePressed != VK_DISABLED;
-            // Hold the lock for the shortest possible duration
             if ((wParam == WM_KEYDOWN || wParam == WM_SYSKEYDOWN))
             {
                 if (!wasKeyPressed)
                 {
                     // If no key was pressed before, let's start a timer to take into account this new key.
-                    std::unique_lock lock{ pressedKeyMutex };
                     PressedKeyDescriptor dummy{ .virtualKey = keyPressInfo.vkCode };
                     auto [it, last] = pressedKeyDescriptors.equal_range(dummy);
                     for (; it != last; ++it)
@@ -129,8 +129,7 @@ namespace CentralizedKeyboardHook
                 else if (vkCodePressed != keyPressInfo.vkCode)
                 {
                     // If a different key was pressed, let's clear the timers we have started for the previous key.
-                    std::unique_lock lock{ pressedKeyMutex };
-                    PressedKeyDescriptor dummy{ .virtualKey = vkCodePressed };
+                    PressedKeyDescriptor dummy{ .virtualKey = vkCodePressed.load() };
                     auto [it, last] = pressedKeyDescriptors.equal_range(dummy);
                     for (; it != last; ++it)
                     {
@@ -141,14 +140,13 @@ namespace CentralizedKeyboardHook
             }
             if (wParam == WM_KEYUP || wParam == WM_SYSKEYUP)
             {
-                std::unique_lock lock{ pressedKeyMutex };
                 PressedKeyDescriptor dummy{ .virtualKey = keyPressInfo.vkCode };
                 auto [it, last] = pressedKeyDescriptors.equal_range(dummy);
                 for (; it != last; ++it)
                 {
                     KillTimer(runnerWindow, it->idTimer);
                 }
-                vkCodePressed = 0x100;
+                vkCodePressed = VK_DISABLED;
             }
         }
 
