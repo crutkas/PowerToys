@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "centralized_kb_hook.h"
+#include <atomic>
 #include <common/debug_control.h>
 #include <common/utils/winapi_error.h>
 #include <common/logger/logger.h>
@@ -42,7 +43,7 @@ namespace CentralizedKeyboardHook
 
     // keep track of last pressed key, to detect repeated keys and if there are more keys pressed.
     const DWORD VK_DISABLED = CommonSharedConstants::VK_DISABLED;
-    DWORD vkCodePressed = VK_DISABLED;
+    std::atomic<DWORD> vkCodePressed{ VK_DISABLED };
 
     // Save the runner window handle for registering timers.
     HWND runnerWindow;
@@ -72,7 +73,12 @@ namespace CentralizedKeyboardHook
         {
             if (it.idTimer == idTimer)
             {
-                it.action();
+                // Revalidate that the key is still physically held before firing.
+                // This prevents ghost activations after the key was already released.
+                if (GetAsyncKeyState(static_cast<int>(it.virtualKey)) & 0x8000)
+                {
+                    it.action();
+                }
             }
         }
 
@@ -91,6 +97,14 @@ namespace CentralizedKeyboardHook
         if (keyPressInfo.dwExtraInfo == PowertoyModuleIface::CENTRALIZED_KEYBOARD_HOOK_DONT_TRIGGER_FLAG)
         {
             // The new keystroke was generated from one of our actions. We should pass it along.
+            return CallNextHookEx(hHook, nCode, wParam, lParam);
+        }
+
+        // Skip events injected by other processes (e.g. OSK, macro tools) that have
+        // LLKHF_INJECTED set but no dwExtraInfo. PowerToys' own injected events carry
+        // dwExtraInfo so they are handled above.
+        if ((keyPressInfo.flags & LLKHF_INJECTED) && keyPressInfo.dwExtraInfo == 0)
+        {
             return CallNextHookEx(hHook, nCode, wParam, lParam);
         }
 
@@ -177,6 +191,7 @@ namespace CentralizedKeyboardHook
                 dummyEvent[0].type = INPUT_KEYBOARD;
                 dummyEvent[0].ki.wVk = 0xFF;
                 dummyEvent[0].ki.dwFlags = KEYEVENTF_KEYUP;
+                dummyEvent[0].ki.dwExtraInfo = PowertoyModuleIface::CENTRALIZED_KEYBOARD_HOOK_DONT_TRIGGER_FLAG;
                 SendInput(1, dummyEvent, sizeof(INPUT));
 
                 // Swallow the key press
@@ -263,6 +278,18 @@ namespace CentralizedKeyboardHook
 
     void Stop() noexcept
     {
+        // Kill all pending pressed-key timers before unhooking to prevent
+        // ghost callbacks firing after the hook is removed.
+        {
+            std::unique_lock lock{ pressedKeyMutex };
+            for (const auto& it : pressedKeyDescriptors)
+            {
+                KillTimer(runnerWindow, it.idTimer);
+            }
+        }
+
+        vkCodePressed = VK_DISABLED;
+
         if (hHook && UnhookWindowsHookEx(hHook))
         {
             hHook = NULL;
