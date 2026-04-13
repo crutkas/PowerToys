@@ -24,6 +24,9 @@ namespace KeyboardManagerInput
 
         std::wstring currentProcess;
 
+        // Controls the return value of SendVirtualInput (default true)
+        bool sendVirtualInputReturnValue = true;
+
     public:
         MockedInput()
         {
@@ -56,6 +59,9 @@ namespace KeyboardManagerInput
 
         // Function to get the foreground process name
         void GetForegroundProcess(_Out_ std::wstring& foregroundProcess);
+
+        // Function to configure the return value of SendVirtualInput
+        void SetSendVirtualInputReturnValue(bool value);
     };
 }
 

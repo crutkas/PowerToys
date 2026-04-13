@@ -107,7 +107,7 @@ bool MockedInput::SendVirtualInput(const std::vector<INPUT>& inputs)
             }
         }
     }
-    return true;
+    return sendVirtualInputReturnValue;
 }
 
 // Function to simulate keyboard hook behavior
@@ -159,4 +159,10 @@ void MockedInput::SetForegroundProcess(std::wstring process)
 void MockedInput::GetForegroundProcess(_Out_ std::wstring& foregroundProcess)
 {
     foregroundProcess = currentProcess;
+}
+
+// Function to configure the return value of SendVirtualInput
+void MockedInput::SetSendVirtualInputReturnValue(bool value)
+{
+    sendVirtualInputReturnValue = value;
 }

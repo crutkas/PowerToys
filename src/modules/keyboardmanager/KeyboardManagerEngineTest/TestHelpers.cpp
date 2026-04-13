@@ -11,8 +11,10 @@ namespace TestHelpers
         input.ResetKeyboardState();
         input.SetHookProc(nullptr);
         input.SetSendVirtualInputTestHandler(nullptr);
+        input.SetSendVirtualInputReturnValue(true);
         input.SetForegroundProcess(L"");
         state.ClearSingleKeyRemaps();
+        state.ClearSingleKeyToTextRemaps();
         state.ClearOSLevelShortcuts();
         state.ClearAppSpecificShortcuts();
 
