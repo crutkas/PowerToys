@@ -51,6 +51,23 @@ namespace winrt::PowerToys::PowerAccentKeyboardService::implementation
         }
     }
 
+    void KeyboardListener::ForceReset()
+    {
+        Logger::debug(L"ForceReset: clearing all state");
+        letterPressed = LetterKey::None;
+        m_toolbarVisible = false;
+        m_triggeredWithSpace = false;
+        m_triggeredWithLeftArrow = false;
+        m_triggeredWithRightArrow = false;
+        m_leftShiftPressed = false;
+        m_rightShiftPressed = false;
+
+        if (m_hideToolbarCb)
+        {
+            m_hideToolbarCb(InputType::None);
+        }
+    }
+
     void KeyboardListener::SetShowToolbarEvent(ShowToolbar showToolbarEvent)
     {
         m_showToolbarCb = [trigger = std::move(showToolbarEvent)](LetterKey key) {
@@ -293,6 +310,14 @@ namespace winrt::PowerToys::PowerAccentKeyboardService::implementation
         if (nCode == HC_ACTION && s_instance != nullptr)
         {
             KBDLLHOOKSTRUCT* key = reinterpret_cast<KBDLLHOOKSTRUCT*>(lParam);
+
+            // Ignore injected key events (e.g. from Keyboard Manager) to prevent
+            // cross-module triggers from activating accent mode.
+            if (key->flags & LLKHF_INJECTED)
+            {
+                return CallNextHookEx(NULL, nCode, wParam, lParam);
+            }
+
             switch (wParam)
             {
                 case WM_KEYDOWN:
