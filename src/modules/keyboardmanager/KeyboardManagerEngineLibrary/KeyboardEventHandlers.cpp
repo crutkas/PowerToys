@@ -1824,7 +1824,7 @@ namespace KeyboardEventHandlers
         }
 
         // Release held modifiers before text injection to prevent Ctrl+text corruption
-        constexpr int modifierKeys[] = { VK_LCONTROL, VK_RCONTROL, VK_LSHIFT, VK_RSHIFT, VK_LMENU, VK_RMENU };
+        constexpr int modifierKeys[] = { VK_LCONTROL, VK_RCONTROL, VK_LSHIFT, VK_RSHIFT, VK_LMENU, VK_RMENU, VK_LWIN, VK_RWIN };
         std::vector<INPUT> releaseEvents;
         std::vector<int> releasedKeys;
 
