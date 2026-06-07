@@ -21,6 +21,12 @@ public:
 protected:
     static LRESULT CALLBACK WndProc_Helper(HWND window, UINT message, WPARAM wparam, LPARAM lparam) noexcept
     {
+        LRESULT endSessionResult = 0;
+        if (handle_session_end_message(window, message, wparam, endSessionResult))
+        {
+            return endSessionResult;
+        }
+
         auto thisRef = reinterpret_cast<AlwaysOnTop*>(GetWindowLongPtr(window, GWLP_USERDATA));
 
         if (!thisRef && (message == WM_CREATE))

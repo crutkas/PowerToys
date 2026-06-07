@@ -5,6 +5,7 @@
 #include <common/Telemetry/ProjectTelemetry.h>
 #include <common/utils/process_path.h>
 #include <common/utils/ProcessWaiter.h>
+#include <common/utils/window.h>
 #include <common/utils/excluded_apps.h>
 #include <common/utils/game_mode.h>
 
@@ -1292,6 +1293,12 @@ static void HandleDragResize(POINT pt)
 }
 static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
+    LRESULT endSessionResult = 0;
+    if (handle_session_end_message(hwnd, msg, wParam, endSessionResult))
+    {
+        return endSessionResult;
+    }
+
     switch (msg)
     {
     case WM_INVALIDATE_EXCLUDED_CACHE:

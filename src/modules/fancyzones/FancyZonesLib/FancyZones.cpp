@@ -6,6 +6,7 @@
 #include <common/logger/call_tracer.h>
 #include <common/utils/EventWaiter.h>
 #include <common/utils/winapi_error.h>
+#include <common/utils/window.h>
 #include <common/SettingsAPI/FileWatcher.h>
 #include <common/notifications/NotificationUtil.h>
 
@@ -814,6 +815,12 @@ bool FancyZones::AddWorkArea(HMONITOR monitor, const FancyZonesDataTypes::WorkAr
 
 LRESULT CALLBACK FancyZones::s_WndProc(HWND window, UINT message, WPARAM wparam, LPARAM lparam) noexcept
 {
+    LRESULT endSessionResult = 0;
+    if (handle_session_end_message(window, message, wparam, endSessionResult))
+    {
+        return endSessionResult;
+    }
+
     auto thisRef = reinterpret_cast<FancyZones*>(GetWindowLongPtr(window, GWLP_USERDATA));
     if (!thisRef && (message == WM_CREATE))
     {

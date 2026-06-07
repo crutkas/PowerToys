@@ -179,6 +179,12 @@ winrt::com_ptr<ID2D1Bitmap> ConvertID3D11Texture2DToD2D1Bitmap(winrt::com_ptr<ID
 
 LRESULT CALLBACK MeasureToolWndProc(HWND window, UINT message, WPARAM wparam, LPARAM lparam) noexcept
 {
+    LRESULT endSessionResult = 0;
+    if (handle_session_end_message(window, message, wparam, endSessionResult))
+    {
+        return endSessionResult;
+    }
+
     switch (message)
     {
     case WM_MOUSELEAVE:

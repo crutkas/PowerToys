@@ -10,6 +10,7 @@
 #include "SelectRectangle.h"
 #include "Utility.h"
 #include "WindowsVersions.h"
+#include <common/utils/window.h>
 
 static void SelectRectangleDebugLog( const wchar_t* format, ... )
 {
@@ -331,6 +332,12 @@ void SelectRectangle::UpdateOwner( HWND window )
 //----------------------------------------------------------------------------
 LRESULT SelectRectangle::WindowProc( HWND window, UINT message, WPARAM wordParam, LPARAM longParam )
 {
+    LRESULT endSessionResult = 0;
+    if( handle_session_end_message( window, message, wordParam, endSessionResult ) )
+    {
+        return endSessionResult;
+    }
+
     switch( message )
     {
     case WM_CREATE:

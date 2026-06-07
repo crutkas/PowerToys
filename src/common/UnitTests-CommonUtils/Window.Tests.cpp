@@ -253,5 +253,68 @@ namespace UnitTestsCommonUtils
             Assert::AreEqual(static_cast<LRESULT>(0xDEAD), result,
                              L"out_result must be left untouched when not handled");
         }
+
+        // Integration test for the recipe each WndProc follows:
+        //
+        //     LRESULT endSessionResult = 0;
+        //     if (handle_session_end_message(window, message, wparam, endSessionResult))
+        //         return endSessionResult;
+        //     // ... regular dispatch ...
+        //
+        // This is the pattern used by the runner (tray_icon_window_proc) and by
+        // every module WndProc updated alongside this change: FancyZones::s_WndProc,
+        // AlwaysOnTop::WndProc_Helper, GrabAndMove::WndProc, SelectRectangle::WindowProc,
+        // MeasureToolWndProc, and BoundsToolWndProc.
+        TEST_METHOD(HandleSessionEndMessage_WiredIntoWndProc_ShutsDownCleanly)
+        {
+            WNDCLASSW wc{};
+            wc.lpfnWndProc = [](HWND hwnd, UINT msg, WPARAM w, LPARAM l) -> LRESULT {
+                LRESULT endSessionResult = 0;
+                if (handle_session_end_message(hwnd, msg, w, endSessionResult))
+                {
+                    return endSessionResult;
+                }
+
+                switch (msg)
+                {
+                case WM_DESTROY:
+                    PostQuitMessage(0);
+                    return 0;
+                default:
+                    return DefWindowProcW(hwnd, msg, w, l);
+                }
+            };
+            wc.hInstance = GetModuleHandleW(nullptr);
+            wc.lpszClassName = L"EndSessionTest_WiredRecipe";
+            RegisterClassW(&wc);
+
+            HWND hwnd = CreateWindowExW(0, L"EndSessionTest_WiredRecipe", L"Test",
+                                        0, 0, 0, 0, 0, HWND_MESSAGE, nullptr,
+                                        GetModuleHandleW(nullptr), nullptr);
+            Assert::IsNotNull(hwnd, L"Test window must be created");
+
+            // WM_QUERYENDSESSION must be intercepted by the helper, returning TRUE
+            // so the OS can proceed with shutdown.
+            LRESULT queryResult = SendMessageW(hwnd, WM_QUERYENDSESSION, 0, 0);
+            Assert::AreEqual(static_cast<LRESULT>(TRUE), queryResult,
+                             L"Recipe must answer WM_QUERYENDSESSION with TRUE");
+            Assert::IsTrue(IsWindow(hwnd) == TRUE,
+                           L"WM_QUERYENDSESSION must not destroy the window");
+
+            // WM_ENDSESSION(TRUE) must tear the window down via the helper.
+            SendMessageW(hwnd, WM_ENDSESSION, TRUE, 0);
+            Assert::IsFalse(IsWindow(hwnd) == TRUE,
+                            L"Recipe must destroy the window on WM_ENDSESSION(TRUE)");
+
+            // And the message loop must exit (WM_QUIT was posted by WM_DESTROY).
+            auto start = std::chrono::steady_clock::now();
+            run_message_loop(false, 1000);
+            auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
+                std::chrono::steady_clock::now() - start);
+            Assert::IsTrue(elapsed.count() < 500,
+                           L"Message loop must exit promptly after end-session teardown");
+
+            UnregisterClassW(L"EndSessionTest_WiredRecipe", GetModuleHandleW(nullptr));
+        }
     };
 }
