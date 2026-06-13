@@ -16,7 +16,7 @@ internal static class WindowsFunctions
 {
     // Mirrors PowertoyModuleIface::CENTRALIZED_KEYBOARD_HOOK_DONT_TRIGGER_FLAG (0x110) so the
     // centralized keyboard hook ignores the keys PowerAccent injects and they don't re-trigger shortcuts.
-    private const nuint POWERTOYS_INJECTED_TAG = 0x110;
+    private const nuint PowerToysInjectedTag = 0x110;
 
     public static void Insert(string s, bool back = false)
     {
@@ -35,7 +35,7 @@ internal static class WindowsFunctions
                             ki = new KEYBDINPUT
                             {
                                 wVk = VIRTUAL_KEY.VK_BACK,
-                                dwExtraInfo = POWERTOYS_INJECTED_TAG,
+                                dwExtraInfo = PowerToysInjectedTag,
                             },
                         },
                     },
@@ -48,7 +48,7 @@ internal static class WindowsFunctions
                             {
                                 wVk = VIRTUAL_KEY.VK_BACK,
                                 dwFlags = KEYBD_EVENT_FLAGS.KEYEVENTF_KEYUP,
-                                dwExtraInfo = POWERTOYS_INJECTED_TAG,
+                                dwExtraInfo = PowerToysInjectedTag,
                             },
                         },
                     },
@@ -59,6 +59,7 @@ internal static class WindowsFunctions
                 {
                     Logger.LogError($"SendInput backspace failed: sent {backSent}/{inputsBack.Length}");
                 }
+
                 Thread.Sleep(1); // Some apps, like Terminal, need a little wait to process the sent backspace or they'll ignore it.
             }
 
@@ -76,7 +77,7 @@ internal static class WindowsFunctions
                             {
                                 wScan = c,
                                 dwFlags = KEYBD_EVENT_FLAGS.KEYEVENTF_UNICODE,
-                                dwExtraInfo = POWERTOYS_INJECTED_TAG,
+                                dwExtraInfo = PowerToysInjectedTag,
                             },
                         },
                     },
@@ -89,7 +90,7 @@ internal static class WindowsFunctions
                             {
                                 wScan = c,
                                 dwFlags = KEYBD_EVENT_FLAGS.KEYEVENTF_UNICODE | KEYBD_EVENT_FLAGS.KEYEVENTF_KEYUP,
-                                dwExtraInfo = POWERTOYS_INJECTED_TAG,
+                                dwExtraInfo = PowerToysInjectedTag,
                             },
                         },
                     },
@@ -146,7 +147,8 @@ internal static class WindowsFunctions
                         ki = new KEYBDINPUT
                         {
                             wVk = arrowKey,
-                            dwExtraInfo = POWERTOYS_INJECTED_TAG,
+                            dwFlags = KEYBD_EVENT_FLAGS.KEYEVENTF_EXTENDEDKEY,
+                            dwExtraInfo = PowerToysInjectedTag,
                         },
                     },
                 },
@@ -158,8 +160,8 @@ internal static class WindowsFunctions
                         ki = new KEYBDINPUT
                         {
                             wVk = arrowKey,
-                            dwFlags = KEYBD_EVENT_FLAGS.KEYEVENTF_KEYUP,
-                            dwExtraInfo = POWERTOYS_INJECTED_TAG,
+                            dwFlags = KEYBD_EVENT_FLAGS.KEYEVENTF_EXTENDEDKEY | KEYBD_EVENT_FLAGS.KEYEVENTF_KEYUP,
+                            dwExtraInfo = PowerToysInjectedTag,
                         },
                     },
                 },
