@@ -359,6 +359,13 @@ Thank you for using PowerToys!
 | Microsoft.PowerToys.Peek_Settings | Triggered when the settings for Peek are modified. |
 | Microsoft.PowerToys.Peek_SpaceModeEnabled | Triggered when the Space key activation mode is enabled or disabled in Peek. |
 
+### Power Display
+
+| Event Name | Description |
+| --- | --- |
+| Microsoft.PowerToys.PowerDisplay_Settings | Triggered when PowerDisplay settings telemetry is requested by the Runner. Logs whether the hotkey is enabled, whether the system tray icon is enabled, the number of monitors detected, and the number of saved profiles. |
+| Microsoft.PowerToys.PowerDisplay_Start | Triggered when PowerDisplay starts. |
+
 ### PowerRename
 
 | Event Name | Description |
