@@ -56,6 +56,7 @@ namespace Microsoft.PowerToys.Settings.UI.ViewModels
         // Flag to prevent toggle operations during sorting to avoid race conditions.
         private bool _isSorting;
         private bool _isDisposed;
+        private bool _hasLoaded;
 
         private AllHotkeyConflictsData _allHotkeyConflictsData = new AllHotkeyConflictsData();
 
@@ -130,6 +131,23 @@ namespace Microsoft.PowerToys.Settings.UI.ViewModels
             BuildModuleList();
             SortModuleList();
             RefreshShortcutModules();
+        }
+
+        public override void OnPageLoaded()
+        {
+            if (_hasLoaded)
+            {
+                RefreshModuleItems();
+                _quickAccessViewModel.RefreshItems();
+                RefreshModuleList();
+                RefreshShortcutModules();
+            }
+            else
+            {
+                _hasLoaded = true;
+            }
+
+            base.OnPageLoaded();
         }
 
         private void OnSettingsChanged(GeneralSettings newSettings)
@@ -284,6 +302,19 @@ namespace Microsoft.PowerToys.Settings.UI.ViewModels
                     {
                         _isSorting = false;
                     });
+                }
+            }
+        }
+
+        private void RefreshModuleItems()
+        {
+            foreach (var item in _moduleItems)
+            {
+                var refreshedItems = GetModuleItems(item.Tag);
+                item.DashboardModuleItems.Clear();
+                foreach (var refreshedItem in refreshedItems)
+                {
+                    item.DashboardModuleItems.Add(refreshedItem);
                 }
             }
         }

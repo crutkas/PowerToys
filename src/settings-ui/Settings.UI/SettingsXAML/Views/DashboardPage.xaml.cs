@@ -11,6 +11,7 @@ using Microsoft.PowerToys.Settings.UI.Library;
 using Microsoft.PowerToys.Settings.UI.ViewModels;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Navigation;
 using Windows.Storage.Pickers;
 
 namespace Microsoft.PowerToys.Settings.UI.Views
@@ -31,6 +32,7 @@ namespace Microsoft.PowerToys.Settings.UI.Views
         /// </summary>
         public DashboardPage()
         {
+            NavigationCacheMode = NavigationCacheMode.Required;
             InitializeComponent();
             var settingsUtils = SettingsUtils.Default;
 
@@ -39,7 +41,6 @@ namespace Microsoft.PowerToys.Settings.UI.Views
             DataContext = ViewModel;
 
             Loaded += (s, e) => ViewModel.OnPageLoaded();
-            Unloaded += (s, e) => ViewModel?.Dispose();
         }
 
         public void RefreshEnabledState()

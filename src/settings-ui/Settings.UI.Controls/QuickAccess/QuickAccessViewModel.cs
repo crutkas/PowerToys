@@ -54,6 +54,12 @@ namespace Microsoft.PowerToys.Settings.UI.Controls
             InitializeItems();
         }
 
+        public void RefreshItems()
+        {
+            Items.Clear();
+            InitializeItems();
+        }
+
         private void OnSettingsChanged(GeneralSettings newSettings)
         {
             if (_dispatcherQueue != null)

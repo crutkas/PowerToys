@@ -48,6 +48,11 @@ namespace ViewModelTests
             {
                 return null;
             }
+
+            public void RefreshSettings()
+            {
+                RefreshSettingsOnExternalChange();
+            }
         }
 
         [TestMethod]
@@ -337,6 +342,52 @@ namespace ViewModelTests
             // Act
             viewModel.ShowSysTrayIcon = false;
             Assert.IsTrue(sawExpectedIpcPayload);
+        }
+
+        [TestMethod]
+        public void RefreshSettingsOnExternalChangeUpdatesCachedValuesWithoutSendingIpc()
+        {
+            GeneralSettings currentSettings = new GeneralSettings();
+            var settingsRepository = new Mock<Microsoft.PowerToys.Settings.UI.Library.Interfaces.ISettingsRepository<GeneralSettings>>();
+            settingsRepository.SetupGet(repository => repository.SettingsConfig).Returns(() => currentSettings);
+
+            int ipcMessageCount = 0;
+            var viewModel = new TestGeneralViewModel(
+                settingsRepository.Object,
+                "GeneralSettings_RunningAsAdminText",
+                "GeneralSettings_RunningAsUserText",
+                false,
+                false,
+                message =>
+                {
+                    ipcMessageCount++;
+                    return 0;
+                },
+                message => 0,
+                message => 0);
+
+            var updatedShortcut = new HotkeySettings();
+            currentSettings = new GeneralSettings
+            {
+                ShowSysTrayIcon = false,
+                ShowThemeAdaptiveTrayIcon = true,
+                RunElevated = true,
+                EnableWarningsElevatedApps = false,
+                EnableQuickAccess = false,
+                QuickAccessShortcut = updatedShortcut,
+                Theme = "dark",
+            };
+
+            viewModel.RefreshSettings();
+
+            Assert.IsFalse(viewModel.ShowSysTrayIcon);
+            Assert.IsTrue(viewModel.ShowThemeAdaptiveTrayIcon);
+            Assert.IsTrue(viewModel.RunElevated);
+            Assert.IsFalse(viewModel.EnableWarningsElevatedApps);
+            Assert.IsFalse(viewModel.EnableQuickAccess);
+            Assert.AreSame(updatedShortcut, viewModel.QuickAccessShortcut);
+            Assert.AreEqual(0, viewModel.ThemeIndex);
+            Assert.AreEqual(0, ipcMessageCount);
         }
 
         [TestMethod]

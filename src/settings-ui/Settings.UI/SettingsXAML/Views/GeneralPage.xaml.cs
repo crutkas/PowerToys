@@ -11,6 +11,7 @@ using Microsoft.PowerToys.Settings.UI.Library;
 using Microsoft.PowerToys.Settings.UI.ViewModels;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Navigation;
 using Windows.Data.Json;
 
 namespace Microsoft.PowerToys.Settings.UI.Views
@@ -33,6 +34,7 @@ namespace Microsoft.PowerToys.Settings.UI.Views
         /// </summary>
         public GeneralPage()
         {
+            NavigationCacheMode = NavigationCacheMode.Required;
             InitializeComponent();
 
             // Load string resources
@@ -86,15 +88,8 @@ namespace Microsoft.PowerToys.Settings.UI.Views
 
             ViewModel.InitializeReportBugLink();
 
-            // Register IPC handler for bug report status
-            ShellPage.ShellHandler.IPCResponseHandleList.Add(HandleBugReportStatusResponse);            // Register cleanup on unload
+            this.Loaded += GeneralPage_Loaded;
             this.Unloaded += GeneralPage_Unloaded;
-
-            CheckBugReportStatus();
-
-            doRefreshBackupRestoreStatus(100);
-
-            this.Loaded += (s, e) => ViewModel.OnPageLoaded();
         }
 
         private void OpenColorsSettings_Click(object sender, RoutedEventArgs e)
@@ -208,6 +203,19 @@ namespace Microsoft.PowerToys.Settings.UI.Views
         private void GeneralPage_Unloaded(object sender, RoutedEventArgs e)
         {
             CleanupBugReportHandlers();
+        }
+
+        private void GeneralPage_Loaded(object sender, RoutedEventArgs e)
+        {
+            if (!ShellPage.ShellHandler.IPCResponseHandleList.Contains(HandleBugReportStatusResponse))
+            {
+                ShellPage.ShellHandler.IPCResponseHandleList.Add(HandleBugReportStatusResponse);
+            }
+
+            CheckBugReportStatus();
+            RefreshBackupRestoreStatus(100);
+            ViewModel.RefreshSettingsOnExternalChange();
+            ViewModel.OnPageLoaded();
         }
 
         private void CleanupBugReportHandlers()

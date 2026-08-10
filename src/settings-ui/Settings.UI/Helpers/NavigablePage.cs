@@ -4,6 +4,7 @@
 
 using System;
 using System.Numerics;
+using System.Threading;
 using System.Threading.Tasks;
 using CommunityToolkit.WinUI.Controls;
 using Microsoft.UI.Xaml;
@@ -20,6 +21,7 @@ public abstract partial class NavigablePage : Page
     private const int AnimationDuration = 1850;
 
     private NavigationParams _pendingNavigationParams;
+    private CancellationTokenSource _navigationCancellationTokenSource;
 
     public NavigablePage()
     {
@@ -30,36 +32,53 @@ public abstract partial class NavigablePage : Page
     {
         base.OnNavigatedTo(e);
 
+        _navigationCancellationTokenSource?.Cancel();
+
         // Handle both old string parameter and new NavigationParams
-        if (e.Parameter is NavigationParams navParams)
+        _pendingNavigationParams = e.Parameter switch
         {
-            _pendingNavigationParams = navParams;
-        }
-        else if (e.Parameter is string elementKey)
-        {
-            _pendingNavigationParams = new NavigationParams(elementKey);
-        }
+            NavigationParams navParams => navParams,
+            string elementKey => new NavigationParams(elementKey),
+            _ => null,
+        };
+    }
+
+    protected override void OnNavigatedFrom(Microsoft.UI.Xaml.Navigation.NavigationEventArgs e)
+    {
+        _navigationCancellationTokenSource?.Cancel();
+        base.OnNavigatedFrom(e);
     }
 
     private async void OnPageLoaded(object sender, RoutedEventArgs e)
     {
-        if (_pendingNavigationParams != null && !string.IsNullOrEmpty(_pendingNavigationParams.ElementName))
+        NavigationParams navigationParams = _pendingNavigationParams;
+        _pendingNavigationParams = null;
+        if (navigationParams == null || string.IsNullOrEmpty(navigationParams.ElementName))
+        {
+            return;
+        }
+
+        _navigationCancellationTokenSource?.Cancel();
+        var cancellationTokenSource = new CancellationTokenSource();
+        _navigationCancellationTokenSource = cancellationTokenSource;
+
+        try
         {
             // First, expand parent if specified
-            if (!string.IsNullOrEmpty(_pendingNavigationParams.ParentElementName))
+            if (!string.IsNullOrEmpty(navigationParams.ParentElementName))
             {
-                var parentElement = FindElementByName(_pendingNavigationParams.ParentElementName);
+                var parentElement = FindElementByName(navigationParams.ParentElementName);
                 if (parentElement is SettingsExpander expander)
                 {
                     expander.IsExpanded = true;
 
                     // Give time for the expander to animate
-                    await Task.Delay(ExpandWaitDuration);
+                    await Task.Delay(ExpandWaitDuration, cancellationTokenSource.Token);
                 }
             }
 
             // Then find and navigate to the target element
-            var target = FindElementByName(_pendingNavigationParams.ElementName);
+            var target = FindElementByName(navigationParams.ElementName);
 
             target?.StartBringIntoView(new BringIntoViewOptions
             {
@@ -67,13 +86,23 @@ public abstract partial class NavigablePage : Page
                 AnimationDesired = true,
             });
 
-            await OnTargetElementNavigatedAsync(target, _pendingNavigationParams.ElementName);
+            await OnTargetElementNavigatedAsync(target, navigationParams.ElementName, cancellationTokenSource.Token);
+        }
+        catch (OperationCanceledException) when (cancellationTokenSource.IsCancellationRequested)
+        {
+        }
+        finally
+        {
+            if (ReferenceEquals(_navigationCancellationTokenSource, cancellationTokenSource))
+            {
+                _navigationCancellationTokenSource = null;
+            }
 
-            _pendingNavigationParams = null;
+            cancellationTokenSource.Dispose();
         }
     }
 
-    protected virtual async Task OnTargetElementNavigatedAsync(FrameworkElement target, string elementKey)
+    protected virtual async Task OnTargetElementNavigatedAsync(FrameworkElement target, string elementKey, CancellationToken cancellationToken)
     {
         if (target == null)
         {
@@ -110,10 +139,17 @@ public abstract partial class NavigablePage : Page
         fadeAnimation.Duration = TimeSpan.FromMilliseconds(AnimationDuration);
 
         dropShadow.StartAnimation("Opacity", fadeAnimation);
-        await Task.Delay(AnimationDuration);
-
-        // Clean up the shadow visual
-        ElementCompositionPreview.SetElementChildVisual(target, null);
+        try
+        {
+            await Task.Delay(AnimationDuration, cancellationToken);
+        }
+        finally
+        {
+            if (ReferenceEquals(ElementCompositionPreview.GetElementChildVisual(target), spriteVisual))
+            {
+                ElementCompositionPreview.SetElementChildVisual(target, null);
+            }
+        }
     }
 
     private static void TrySetFocus(FrameworkElement target)

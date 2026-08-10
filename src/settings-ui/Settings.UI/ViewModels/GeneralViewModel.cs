@@ -132,81 +132,21 @@ namespace Microsoft.PowerToys.Settings.UI.ViewModels
             // Update Settings file folder:
             _settingsConfigFileFolder = configFileSubfolder;
 
-            // Using Invariant here as these are internal strings and the analyzer
-            // expects strings to be normalized to uppercase. While the theme names
-            // are represented in lowercase everywhere else, we'll use uppercase
-            // normalization for switch statements
-            switch (GeneralSettingsConfig.Theme.ToUpperInvariant())
-            {
-                case "DARK":
-                    _themeIndex = 0;
-                    break;
-                case "LIGHT":
-                    _themeIndex = 1;
-                    break;
-                case "SYSTEM":
-                    _themeIndex = 2;
-                    break;
-            }
-
             _isDevBuild = Helper.GetProductVersion() == "v0.0.1";
-
-            _runAtStartupGpoRuleConfiguration = GPOWrapper.GetConfiguredRunAtStartupValue();
-            if (_runAtStartupGpoRuleConfiguration == GpoRuleConfigured.Disabled || _runAtStartupGpoRuleConfiguration == GpoRuleConfigured.Enabled)
-            {
-                // Get the enabled state from GPO.
-                _runAtStartupIsGPOConfigured = true;
-                _startup = _runAtStartupGpoRuleConfiguration == GpoRuleConfigured.Enabled;
-            }
-            else
-            {
-                _startup = GeneralSettingsConfig.Startup;
-            }
-
-            _showSysTrayIcon = GeneralSettingsConfig.ShowSysTrayIcon;
-            _showThemeAdaptiveSysTrayIcon = GeneralSettingsConfig.ShowThemeAdaptiveTrayIcon;
-            _showNewUpdatesToastNotification = GeneralSettingsConfig.ShowNewUpdatesToastNotification;
-            _autoDownloadUpdates = GeneralSettingsConfig.AutoDownloadUpdates;
-            _showWhatsNewAfterUpdates = GeneralSettingsConfig.ShowWhatsNewAfterUpdates;
-            _enableExperimentation = GeneralSettingsConfig.EnableExperimentation;
-
             _isElevated = isElevated;
-            _runElevated = GeneralSettingsConfig.RunElevated;
-            _enableWarningsElevatedApps = GeneralSettingsConfig.EnableWarningsElevatedApps;
-            _enableQuickAccess = GeneralSettingsConfig.EnableQuickAccess;
-            _quickAccessShortcut = GeneralSettingsConfig.QuickAccessShortcut;
-            if (_quickAccessShortcut != null)
-            {
-                _quickAccessShortcut.PropertyChanged += QuickAccessShortcut_PropertyChanged;
-            }
+            _isAdmin = isAdmin;
+
+            ApplyGeneralSettings(GeneralSettingsConfig);
+            RefreshPolicySettings();
+            RefreshDiagnosticsSettings();
 
             RunningAsUserDefaultText = runAsUserText;
             RunningAsAdminDefaultText = runAsAdminText;
-
-            _isAdmin = isAdmin;
 
             _updatingState = UpdatingSettingsConfig.State;
             _newAvailableVersion = UpdatingSettingsConfig.NewVersion;
             _newAvailableVersionLink = UpdatingSettingsConfig.ReleasePageLink;
             _updateCheckedDate = UpdatingSettingsConfig.LastCheckedDateLocalized;
-
-            _newUpdatesToastIsGpoDisabled = GPOWrapper.GetDisableNewUpdateToastValue() == GpoRuleConfigured.Enabled;
-            _autoDownloadUpdatesIsGpoDisabled = GPOWrapper.GetDisableAutomaticUpdateDownloadValue() == GpoRuleConfigured.Enabled;
-            _experimentationIsGpoDisallowed = GPOWrapper.GetAllowExperimentationValue() == GpoRuleConfigured.Disabled;
-            _showWhatsNewAfterUpdatesIsGpoDisabled = GPOWrapper.GetDisableShowWhatsNewAfterUpdatesValue() == GpoRuleConfigured.Enabled;
-            _enableDataDiagnosticsIsGpoDisallowed = GPOWrapper.GetAllowDataDiagnosticsValue() == GpoRuleConfigured.Disabled;
-
-            if (_enableDataDiagnosticsIsGpoDisallowed)
-            {
-                _enableDataDiagnostics = false;
-            }
-            else
-            {
-                _enableDataDiagnostics = DataDiagnosticsSettings.GetEnabledValue();
-            }
-
-            _enableViewDataDiagnostics = DataDiagnosticsSettings.GetViewEnabledValue();
-            _enableViewDataDiagnosticsOnLoad = _enableViewDataDiagnostics;
 
             if (dispatcherAction != null)
             {
@@ -1455,11 +1395,143 @@ namespace Microsoft.PowerToys.Settings.UI.ViewModels
             SendConfigMSG(outsettings.ToString());
         }
 
-        internal void RefreshSettingsOnExternalChange()
+        protected internal void RefreshSettingsOnExternalChange()
         {
-            EnableDataDiagnostics = DataDiagnosticsSettings.GetEnabledValue();
+            ApplyGeneralSettings(_settingsRepository.SettingsConfig);
+            RefreshPolicySettings();
+            RefreshDiagnosticsSettings();
+        }
 
-            NotifyPropertyChanged(nameof(EnableDataDiagnostics));
+        private void ApplyGeneralSettings(GeneralSettings settings)
+        {
+            GeneralSettingsConfig = settings;
+
+            int? themeIndex = settings.Theme?.ToUpperInvariant() switch
+            {
+                "DARK" => 0,
+                "LIGHT" => 1,
+                "SYSTEM" => 2,
+                _ => null,
+            };
+
+            if (themeIndex.HasValue)
+            {
+                UpdateField(ref _themeIndex, themeIndex.Value, nameof(ThemeIndex));
+            }
+
+            UpdateField(ref _showSysTrayIcon, settings.ShowSysTrayIcon, nameof(ShowSysTrayIcon));
+            UpdateField(ref _showThemeAdaptiveSysTrayIcon, settings.ShowThemeAdaptiveTrayIcon, nameof(ShowThemeAdaptiveTrayIcon));
+            UpdateField(ref _showNewUpdatesToastNotification, settings.ShowNewUpdatesToastNotification, nameof(ShowNewUpdatesToastNotification));
+            UpdateField(ref _autoDownloadUpdates, settings.AutoDownloadUpdates, nameof(AutoDownloadUpdates));
+            UpdateField(ref _showWhatsNewAfterUpdates, settings.ShowWhatsNewAfterUpdates, nameof(ShowWhatsNewAfterUpdates));
+            UpdateField(ref _enableExperimentation, settings.EnableExperimentation, nameof(EnableExperimentation));
+            UpdateField(ref _runElevated, settings.RunElevated, nameof(RunElevated));
+            UpdateField(ref _enableWarningsElevatedApps, settings.EnableWarningsElevatedApps, nameof(EnableWarningsElevatedApps));
+            UpdateField(ref _enableQuickAccess, settings.EnableQuickAccess, nameof(EnableQuickAccess));
+
+            if (!ReferenceEquals(_quickAccessShortcut, settings.QuickAccessShortcut))
+            {
+                if (_quickAccessShortcut != null)
+                {
+                    _quickAccessShortcut.PropertyChanged -= QuickAccessShortcut_PropertyChanged;
+                }
+
+                _quickAccessShortcut = settings.QuickAccessShortcut;
+                if (_quickAccessShortcut != null)
+                {
+                    _quickAccessShortcut.PropertyChanged += QuickAccessShortcut_PropertyChanged;
+                }
+
+                OnPropertyChanged(nameof(QuickAccessShortcut));
+            }
+        }
+
+        private void RefreshPolicySettings()
+        {
+            GpoRuleConfigured runAtStartupPolicy = GPOWrapper.GetConfiguredRunAtStartupValue();
+            bool runAtStartupIsManaged = runAtStartupPolicy == GpoRuleConfigured.Disabled || runAtStartupPolicy == GpoRuleConfigured.Enabled;
+            bool startup = runAtStartupIsManaged
+                ? runAtStartupPolicy == GpoRuleConfigured.Enabled
+                : GeneralSettingsConfig.Startup;
+
+            _runAtStartupGpoRuleConfiguration = runAtStartupPolicy;
+            UpdateField(ref _runAtStartupIsGPOConfigured, runAtStartupIsManaged, nameof(IsRunAtStartupGPOManaged));
+            UpdateField(ref _startup, startup, nameof(Startup));
+
+            bool updatePolicyChanged = false;
+            bool newUpdatesToastIsGpoDisabled = GPOWrapper.GetDisableNewUpdateToastValue() == GpoRuleConfigured.Enabled;
+            if (_newUpdatesToastIsGpoDisabled != newUpdatesToastIsGpoDisabled)
+            {
+                _newUpdatesToastIsGpoDisabled = newUpdatesToastIsGpoDisabled;
+                OnPropertyChanged(nameof(ShowNewUpdatesToastNotification));
+                OnPropertyChanged(nameof(IsShowNewUpdatesToastNotificationCardEnabled));
+                updatePolicyChanged = true;
+            }
+
+            bool autoDownloadUpdatesIsGpoDisabled = GPOWrapper.GetDisableAutomaticUpdateDownloadValue() == GpoRuleConfigured.Enabled;
+            if (_autoDownloadUpdatesIsGpoDisabled != autoDownloadUpdatesIsGpoDisabled)
+            {
+                _autoDownloadUpdatesIsGpoDisabled = autoDownloadUpdatesIsGpoDisabled;
+                OnPropertyChanged(nameof(AutoDownloadUpdates));
+                OnPropertyChanged(nameof(IsAutoDownloadUpdatesCardEnabled));
+                updatePolicyChanged = true;
+            }
+
+            bool showWhatsNewAfterUpdatesIsGpoDisabled = GPOWrapper.GetDisableShowWhatsNewAfterUpdatesValue() == GpoRuleConfigured.Enabled;
+            if (_showWhatsNewAfterUpdatesIsGpoDisabled != showWhatsNewAfterUpdatesIsGpoDisabled)
+            {
+                _showWhatsNewAfterUpdatesIsGpoDisabled = showWhatsNewAfterUpdatesIsGpoDisabled;
+                OnPropertyChanged(nameof(ShowWhatsNewAfterUpdates));
+                OnPropertyChanged(nameof(IsShowWhatsNewAfterUpdatesCardEnabled));
+                updatePolicyChanged = true;
+            }
+
+            if (updatePolicyChanged)
+            {
+                OnPropertyChanged(nameof(SomeUpdateSettingsAreGpoManaged));
+            }
+
+            bool experimentationIsGpoDisallowed = GPOWrapper.GetAllowExperimentationValue() == GpoRuleConfigured.Disabled;
+            if (_experimentationIsGpoDisallowed != experimentationIsGpoDisallowed)
+            {
+                _experimentationIsGpoDisallowed = experimentationIsGpoDisallowed;
+                OnPropertyChanged(nameof(EnableExperimentation));
+                OnPropertyChanged(nameof(IsExperimentationGpoDisallowed));
+            }
+
+            bool dataDiagnosticsIsGpoDisallowed = GPOWrapper.GetAllowDataDiagnosticsValue() == GpoRuleConfigured.Disabled;
+            if (_enableDataDiagnosticsIsGpoDisallowed != dataDiagnosticsIsGpoDisallowed)
+            {
+                _enableDataDiagnosticsIsGpoDisallowed = dataDiagnosticsIsGpoDisallowed;
+                OnPropertyChanged(nameof(IsDataDiagnosticsGPOManaged));
+            }
+        }
+
+        private void RefreshDiagnosticsSettings()
+        {
+            bool enableDataDiagnostics = !_enableDataDiagnosticsIsGpoDisallowed && DataDiagnosticsSettings.GetEnabledValue();
+            UpdateField(ref _enableDataDiagnostics, enableDataDiagnostics, nameof(EnableDataDiagnostics));
+
+            bool enableViewDataDiagnostics = DataDiagnosticsSettings.GetViewEnabledValue();
+            UpdateField(ref _enableViewDataDiagnostics, enableViewDataDiagnostics, nameof(EnableViewDataDiagnostics));
+            _enableViewDataDiagnosticsOnLoad = enableViewDataDiagnostics;
+
+            if (_viewDiagnosticDataViewerChanged)
+            {
+                _viewDiagnosticDataViewerChanged = false;
+                OnPropertyChanged(nameof(ViewDiagnosticDataViewerChanged));
+            }
+        }
+
+        private void UpdateField<T>(ref T field, T value, string propertyName)
+        {
+            if (EqualityComparer<T>.Default.Equals(field, value))
+            {
+                return;
+            }
+
+            field = value;
+            OnPropertyChanged(propertyName);
         }
 
         // Per retention policy
@@ -1535,13 +1607,8 @@ namespace Microsoft.PowerToys.Settings.UI.ViewModels
         {
             _dispatcherQueue?.TryEnqueue(() =>
             {
-                GeneralSettingsConfig = newSettings;
-
-                if (_enableQuickAccess != newSettings.EnableQuickAccess)
-                {
-                    _enableQuickAccess = newSettings.EnableQuickAccess;
-                    OnPropertyChanged(nameof(EnableQuickAccess));
-                }
+                ApplyGeneralSettings(newSettings);
+                RefreshPolicySettings();
             });
         }
 
@@ -1551,6 +1618,11 @@ namespace Microsoft.PowerToys.Settings.UI.ViewModels
             if (_settingsRepository != null)
             {
                 _settingsRepository.SettingsChanged -= OnSettingsChanged;
+            }
+
+            if (_quickAccessShortcut != null)
+            {
+                _quickAccessShortcut.PropertyChanged -= QuickAccessShortcut_PropertyChanged;
             }
 
             GC.SuppressFinalize(this);
