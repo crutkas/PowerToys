@@ -11,7 +11,6 @@
             x:Key="BoolToVisibilityConverter"
             FalseValue="Collapsed"
             TrueValue="Visible" />
-        <tkconverters:StringVisibilityConverter x:Key="StringVisibilityConverter" />
     </UserControl.Resources>
 
     <ItemsControl ItemsSource="{x:Bind ItemsSource, Mode=OneWay}">
@@ -26,6 +25,8 @@
                     AutomationProperties.Name="{x:Bind Title}"
                     Command="{x:Bind Command}"
                     CommandParameter="{x:Bind CommandParameter}"
+                    GettingFocus="QuickAccessItem_GettingFocus"
+                    PointerEntered="QuickAccessItem_PointerEntered"
                     Visibility="{x:Bind Visible, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
                     <local:FlyoutMenuButton.Content>
                         <TextBlock
@@ -42,7 +43,7 @@
                         </Image>
                     </local:FlyoutMenuButton.Icon>
                     <ToolTipService.ToolTip>
-                        <ToolTip Content="{x:Bind Description}" Visibility="{x:Bind Description, Converter={StaticResource StringVisibilityConverter}}" />
+                        <ToolTip Content="{x:Bind Description, Mode=OneWay}" Visibility="{x:Bind HasDescription, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
                     </ToolTipService.ToolTip>
                 </local:FlyoutMenuButton>
             </DataTemplate>

@@ -2,6 +2,7 @@
 // The Microsoft Corporation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using System;
 using System.Windows.Input;
 using Microsoft.PowerToys.Settings.UI.Library.Helpers;
 using Microsoft.UI.Xaml;
@@ -10,6 +11,17 @@ namespace Microsoft.PowerToys.Settings.UI.Controls
 {
     public sealed class QuickAccessItem : Observable
     {
+        private Func<string>? _descriptionFactory;
+
+        public QuickAccessItem()
+        {
+        }
+
+        public QuickAccessItem(Func<string>? descriptionFactory)
+        {
+            _descriptionFactory = descriptionFactory;
+        }
+
         private string _title = string.Empty;
 
         public string Title
@@ -24,6 +36,22 @@ namespace Microsoft.PowerToys.Settings.UI.Controls
         {
             get => _description;
             set => Set(ref _description, value);
+        }
+
+        public bool HasDescription => _descriptionFactory is not null || !string.IsNullOrEmpty(_description);
+
+        public void LoadDescription()
+        {
+            var descriptionFactory = _descriptionFactory;
+            if (descriptionFactory is null)
+            {
+                return;
+            }
+
+            var description = descriptionFactory();
+            _descriptionFactory = null;
+            Description = description;
+            OnPropertyChanged(nameof(HasDescription));
         }
 
         private string _icon = string.Empty;
