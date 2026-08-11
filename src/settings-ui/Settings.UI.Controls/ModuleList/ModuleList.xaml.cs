@@ -38,6 +38,14 @@ namespace Microsoft.PowerToys.Settings.UI.Controls
 
         public static readonly DependencyProperty ItemsSourceProperty = DependencyProperty.Register(nameof(ItemsSource), typeof(object), typeof(ModuleList), new PropertyMetadata(null));
 
+        public double VerticalCacheLength
+        {
+            get => (double)GetValue(VerticalCacheLengthProperty);
+            set => SetValue(VerticalCacheLengthProperty, value);
+        }
+
+        public static readonly DependencyProperty VerticalCacheLengthProperty = DependencyProperty.Register(nameof(VerticalCacheLength), typeof(double), typeof(ModuleList), new PropertyMetadata(2.0));
+
         public ModuleListSortOption SortOption
         {
             get => (ModuleListSortOption)GetValue(SortOptionProperty);
