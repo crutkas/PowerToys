@@ -4,6 +4,7 @@
 
 using Microsoft.PowerToys.Settings.UI.Helpers;
 using Microsoft.PowerToys.Settings.UI.ViewModels;
+using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 
 namespace Microsoft.PowerToys.Settings.UI.Views
@@ -17,6 +18,18 @@ namespace Microsoft.PowerToys.Settings.UI.Views
             ViewModel = new CmdNotFoundViewModel();
             DataContext = ViewModel;
             InitializeComponent();
+            Loaded += CmdNotFoundPage_Loaded;
+        }
+
+        private async void CmdNotFoundPage_Loaded(object sender, RoutedEventArgs e)
+        {
+            Loaded -= CmdNotFoundPage_Loaded;
+            await ViewModel.CheckCommandNotFoundRequirementsAsync();
+        }
+
+        private async void CheckCompatibility_Click(object sender, RoutedEventArgs e)
+        {
+            await ViewModel.CheckCommandNotFoundRequirementsAsync();
         }
     }
 }

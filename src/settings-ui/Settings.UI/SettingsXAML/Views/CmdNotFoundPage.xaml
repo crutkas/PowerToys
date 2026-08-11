@@ -38,9 +38,14 @@
                 <tkcontrols:SettingsExpander
                     Name="CmdNotFoundEnable"
                     x:Uid="CmdNotFound_Enable"
+                    AutomationProperties.AutomationId="CmdNotFoundSettingsExpander"
                     HeaderIcon="{ui:BitmapIcon Source=/Assets/Settings/Icons/CommandNotFound.png}"
+                    IsEnabled="{x:Bind ViewModel.IsCheckingRequirements, Mode=OneWay, Converter={StaticResource BoolNegationConverter}}"
                     IsExpanded="True">
-                    <tkcontrols:SwitchPresenter TargetType="x:Boolean" Value="{x:Bind ViewModel.IsCommandNotFoundModuleInstalled, Mode=OneWay}">
+                    <tkcontrols:SwitchPresenter
+                        TargetType="x:Boolean"
+                        Visibility="{x:Bind ViewModel.IsCheckingRequirements, Mode=OneWay, Converter={StaticResource ReverseBoolToVisibilityConverter}}"
+                        Value="{x:Bind ViewModel.IsCommandNotFoundModuleInstalled, Mode=OneWay}">
                         <tkcontrols:Case Value="True">
                             <StackPanel Orientation="Horizontal" Spacing="8">
                                 <TextBlock
@@ -69,6 +74,14 @@
                     </tkcontrols:SwitchPresenter>
                     <tkcontrols:SettingsExpander.ItemsHeader>
                         <StackPanel>
+                            <ProgressRing
+                                Width="32"
+                                Height="32"
+                                Margin="0,12"
+                                HorizontalAlignment="Center"
+                                AutomationProperties.AutomationId="CmdNotFoundRequirementsProgressRing"
+                                IsActive="{x:Bind ViewModel.IsCheckingRequirements, Mode=OneWay}"
+                                Visibility="{x:Bind ViewModel.IsCheckingRequirements, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
                             <InfoBar
                                 x:Uid="CmdNotFound_RequirementsBar"
                                 BorderThickness="0"
@@ -76,7 +89,10 @@
                                 IsClosable="False"
                                 IsOpen="True">
                                 <InfoBar.ActionButton>
-                                    <HyperlinkButton x:Uid="CmdNotFound_CheckCompatibility" Command="{x:Bind ViewModel.CheckRequirementsEventHandler}">
+                                    <HyperlinkButton
+                                        x:Uid="CmdNotFound_CheckCompatibility"
+                                        AutomationProperties.AutomationId="CmdNotFoundRefreshButton"
+                                        Click="CheckCompatibility_Click">
                                         <ToolTipService.ToolTip>
                                             <TextBlock x:Uid="CmdNotFound_CheckCompatibilityTooltip" TextWrapping="Wrap" />
                                         </ToolTipService.ToolTip>
@@ -86,7 +102,10 @@
                         </StackPanel>
                     </tkcontrols:SettingsExpander.ItemsHeader>
                     <tkcontrols:SettingsExpander.Items>
-                        <tkcontrols:SettingsCard Name="CmdNotFoundPowerShellDetection" x:Uid="CmdNotFound_PowerShellDetection">
+                        <tkcontrols:SettingsCard
+                            Name="CmdNotFoundPowerShellDetection"
+                            x:Uid="CmdNotFound_PowerShellDetection"
+                            Visibility="{x:Bind ViewModel.IsCheckingRequirements, Mode=OneWay, Converter={StaticResource ReverseBoolToVisibilityConverter}}">
                             <tkcontrols:SwitchPresenter TargetType="x:Boolean" Value="{x:Bind ViewModel.IsPowerShell7Detected, Mode=OneWay}">
                                 <tkcontrols:Case Value="True">
                                     <StackPanel Orientation="Horizontal" Spacing="8">
@@ -119,7 +138,10 @@
                             </tkcontrols:SwitchPresenter>
                         </tkcontrols:SettingsCard>
 
-                        <tkcontrols:SettingsCard Name="CmdNotFoundWinGetClientDetection" x:Uid="CmdNotFound_WinGetClientDetection">
+                        <tkcontrols:SettingsCard
+                            Name="CmdNotFoundWinGetClientDetection"
+                            x:Uid="CmdNotFound_WinGetClientDetection"
+                            Visibility="{x:Bind ViewModel.IsCheckingRequirements, Mode=OneWay, Converter={StaticResource ReverseBoolToVisibilityConverter}}">
                             <tkcontrols:SwitchPresenter TargetType="x:Boolean" Value="{x:Bind ViewModel.IsWinGetClientModuleDetected, Mode=OneWay}">
                                 <tkcontrols:Case Value="True">
                                     <StackPanel Orientation="Horizontal" Spacing="8">

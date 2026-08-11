@@ -9,6 +9,8 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
+using System.Text;
+using System.Threading.Tasks;
 
 using global::PowerToys.GPOWrapper;
 using ManagedCommon;
@@ -21,8 +23,6 @@ namespace Microsoft.PowerToys.Settings.UI.ViewModels
 {
     public partial class CmdNotFoundViewModel : Observable
     {
-        public ButtonClickCommand CheckRequirementsEventHandler => new ButtonClickCommand(CheckCommandNotFoundRequirements);
-
         public ButtonClickCommand InstallPowerShell7EventHandler => new ButtonClickCommand(InstallPowerShell7);
 
         public ButtonClickCommand InstallWinGetClientModuleEventHandler => new ButtonClickCommand(InstallWinGetClientModule);
@@ -34,6 +34,32 @@ namespace Microsoft.PowerToys.Settings.UI.ViewModels
         private GpoRuleConfigured _enabledGpoRuleConfiguration;
         private bool _moduleIsGpoEnabled;
         private bool _moduleIsGpoDisabled;
+        private bool _isRequirementsCheckRunning;
+
+        private sealed class CommandNotFoundRequirements
+        {
+            public CommandNotFoundRequirements(string outputLog, bool isPowerShell7Detected, bool isPowerShellPreviewDetected, string powerShellPreviewPath, bool isWinGetClientModuleDetected, bool isCommandNotFoundModuleInstalled)
+            {
+                OutputLog = outputLog;
+                IsPowerShell7Detected = isPowerShell7Detected;
+                IsPowerShellPreviewDetected = isPowerShellPreviewDetected;
+                PowerShellPreviewPath = powerShellPreviewPath;
+                IsWinGetClientModuleDetected = isWinGetClientModuleDetected;
+                IsCommandNotFoundModuleInstalled = isCommandNotFoundModuleInstalled;
+            }
+
+            public string OutputLog { get; }
+
+            public bool IsPowerShell7Detected { get; }
+
+            public bool IsPowerShellPreviewDetected { get; }
+
+            public string PowerShellPreviewPath { get; }
+
+            public bool IsWinGetClientModuleDetected { get; }
+
+            public bool IsCommandNotFoundModuleInstalled { get; }
+        }
 
         public static string AssemblyDirectory
         {
@@ -56,8 +82,6 @@ namespace Microsoft.PowerToys.Settings.UI.ViewModels
 
             // Update PATH environment variable to get pwsh.exe on further calls.
             Environment.SetEnvironmentVariable("PATH", (Environment.GetEnvironmentVariable("PATH", EnvironmentVariableTarget.Machine) ?? string.Empty) + ";" + (Environment.GetEnvironmentVariable("PATH", EnvironmentVariableTarget.User) ?? string.Empty), EnvironmentVariableTarget.Process);
-
-            CheckCommandNotFoundRequirements();
         }
 
         private string _commandOutputLog;
@@ -123,6 +147,21 @@ namespace Microsoft.PowerToys.Settings.UI.ViewModels
             }
         }
 
+        private bool _isCheckingRequirements = true;
+
+        public bool IsCheckingRequirements
+        {
+            get => _isCheckingRequirements;
+            private set
+            {
+                if (_isCheckingRequirements != value)
+                {
+                    _isCheckingRequirements = value;
+                    OnPropertyChanged(nameof(IsCheckingRequirements));
+                }
+            }
+        }
+
         public bool IsModuleGpoEnabled
         {
             get => _moduleIsGpoEnabled;
@@ -147,7 +186,14 @@ namespace Microsoft.PowerToys.Settings.UI.ViewModels
 
         public string RunPowerShellScript(string powershellExecutable, string powershellArguments, bool hidePowerShellWindow = false)
         {
-            string outputLog = string.Empty;
+            string outputLog = ExecutePowerShellScript(powershellExecutable, powershellArguments, hidePowerShellWindow);
+            CommandOutputLog = outputLog;
+            return outputLog;
+        }
+
+        protected virtual string ExecutePowerShellScript(string powershellExecutable, string powershellArguments, bool hidePowerShellWindow = false)
+        {
+            var outputLog = new StringBuilder();
             try
             {
                 var startInfo = new ProcessStartInfo()
@@ -159,44 +205,78 @@ namespace Microsoft.PowerToys.Settings.UI.ViewModels
                     RedirectStandardOutput = true,
                 };
                 startInfo.EnvironmentVariables["NO_COLOR"] = "1";
-                var process = Process.Start(startInfo);
+                using var process = Process.Start(startInfo) ?? throw new InvalidOperationException($"Failed to start {powershellExecutable}.");
                 while (!process.StandardOutput.EndOfStream)
                 {
-                    outputLog += process.StandardOutput.ReadLine() + "\r\n"; // Weirdly, PowerShell 7 won't give us new lines.
+                    outputLog.AppendLine(process.StandardOutput.ReadLine()); // Weirdly, PowerShell 7 won't give us new lines.
                 }
+
+                process.WaitForExit();
             }
             catch (Exception ex)
             {
-                outputLog = ex.ToString();
+                outputLog.Clear();
+                outputLog.Append(ex);
             }
 
-            CommandOutputLog = outputLog;
-            return outputLog;
+            return outputLog.ToString();
         }
 
-        public void CheckCommandNotFoundRequirements()
+        public async Task CheckCommandNotFoundRequirementsAsync()
         {
-            isPowerShellPreviewDetected = false;
+            if (_isRequirementsCheckRunning)
+            {
+                return;
+            }
+
+            _isRequirementsCheckRunning = true;
+            IsCheckingRequirements = true;
+            CommandOutputLog = string.Empty;
+            try
+            {
+                CommandNotFoundRequirements requirements = await Task.Run(GetCommandNotFoundRequirements);
+
+                isPowerShellPreviewDetected = requirements.IsPowerShellPreviewDetected;
+                powerShellPreviewPath = requirements.PowerShellPreviewPath;
+                CommandOutputLog = requirements.OutputLog;
+                IsPowerShell7Detected = requirements.IsPowerShell7Detected;
+                IsWinGetClientModuleDetected = requirements.IsWinGetClientModuleDetected;
+                IsCommandNotFoundModuleInstalled = requirements.IsCommandNotFoundModuleInstalled;
+                Logger.LogInfo(requirements.OutputLog);
+            }
+            finally
+            {
+                IsCheckingRequirements = false;
+                _isRequirementsCheckRunning = false;
+            }
+        }
+
+        private CommandNotFoundRequirements GetCommandNotFoundRequirements()
+        {
+            bool powerShell7Detected = false;
+            bool powerShellPreviewDetected = false;
+            string detectedPowerShellPreviewPath = null;
             var ps1File = AssemblyDirectory + "\\Assets\\Settings\\Scripts\\CheckCmdNotFoundRequirements.ps1";
             var arguments = $"-NoProfile -NonInteractive -ExecutionPolicy Unrestricted -File \"{ps1File}\"";
-            var result = RunPowerShellScript("pwsh.exe", arguments, true);
+            var result = ExecutePowerShellScript("pwsh.exe", arguments, true);
+            var outputLog = result;
 
             if (result.Contains("PowerShell 7.4 or greater detected."))
             {
-                IsPowerShell7Detected = true;
+                powerShell7Detected = true;
             }
             else if (result.Contains("PowerShell 7.4 or greater not detected."))
             {
-                IsPowerShell7Detected = false;
+                powerShell7Detected = false;
             }
             else if (result.Contains("pwsh.exe"))
             {
                 // Likely an error saying there was an error starting pwsh.exe, so we can assume Powershell 7 was not detected.
-                CommandOutputLog += "PowerShell 7.4 or greater not detected. Installation instructions can be found on https://learn.microsoft.com/powershell/scripting/install/installing-powershell-on-windows \r\n";
-                IsPowerShell7Detected = false;
+                outputLog += "PowerShell 7.4 or greater not detected. Installation instructions can be found on https://learn.microsoft.com/powershell/scripting/install/installing-powershell-on-windows \r\n";
+                powerShell7Detected = false;
             }
 
-            if (!IsPowerShell7Detected)
+            if (!powerShell7Detected)
             {
                 // powerShell Preview might be installed, check it.
                 try
@@ -206,12 +286,13 @@ namespace Microsoft.PowerToys.Settings.UI.ViewModels
                     {
                         if (File.Exists(Path.Combine(pathCandidate, "pwsh-preview.cmd")))
                         {
-                            result = RunPowerShellScript(Path.Combine(pathCandidate, "pwsh-preview.cmd"), arguments, true);
+                            result = ExecutePowerShellScript(Path.Combine(pathCandidate, "pwsh-preview.cmd"), arguments, true);
+                            outputLog = result;
                             if (result.Contains("PowerShell 7.4 or greater detected."))
                             {
-                                isPowerShellPreviewDetected = true;
-                                IsPowerShell7Detected = true;
-                                powerShellPreviewPath = pathCandidate;
+                                powerShellPreviewDetected = true;
+                                powerShell7Detected = true;
+                                detectedPowerShellPreviewPath = pathCandidate;
                                 break;
                             }
                         }
@@ -223,25 +304,16 @@ namespace Microsoft.PowerToys.Settings.UI.ViewModels
                 }
             }
 
-            if (result.Contains("WinGet Client module detected."))
-            {
-                IsWinGetClientModuleDetected = true;
-            }
-            else if (result.Contains("WinGet Client module not detected.") || result.Contains("WinGet Client module needs to be updated."))
-            {
-                IsWinGetClientModuleDetected = false;
-            }
+            bool winGetClientModuleDetected = result.Contains("WinGet Client module detected.");
+            bool commandNotFoundModuleInstalled = result.Contains("Command Not Found module is registered in the profile file.");
 
-            if (result.Contains("Command Not Found module is registered in the profile file."))
-            {
-                IsCommandNotFoundModuleInstalled = true;
-            }
-            else if (result.Contains("Command Not Found module is not registered in the profile file.") || result.Contains("Outdated version of Command Not Found module found in the profile file."))
-            {
-                IsCommandNotFoundModuleInstalled = false;
-            }
-
-            Logger.LogInfo(result);
+            return new CommandNotFoundRequirements(
+                outputLog,
+                powerShell7Detected,
+                powerShellPreviewDetected,
+                detectedPowerShellPreviewPath,
+                winGetClientModuleDetected,
+                commandNotFoundModuleInstalled);
         }
 
         public void InstallPowerShell7()
