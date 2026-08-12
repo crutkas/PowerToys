@@ -27,6 +27,7 @@ namespace Microsoft.PowerToys.Settings.UI.Helpers
                 case ModuleType.FancyZones: return GPOWrapper.GetConfiguredFancyZonesEnabledValue();
                 case ModuleType.FileLocksmith: return GPOWrapper.GetConfiguredFileLocksmithEnabledValue();
                 case ModuleType.FindMyMouse: return GPOWrapper.GetConfiguredFindMyMouseEnabledValue();
+                case ModuleType.AltWindowCycle: return GPOWrapper.GetConfiguredAltWindowCycleEnabledValue();
                 case ModuleType.Hosts: return GPOWrapper.GetConfiguredHostsFileEditorEnabledValue();
                 case ModuleType.ImageResizer: return GPOWrapper.GetConfiguredImageResizerEnabledValue();
                 case ModuleType.KeyboardManager: return GPOWrapper.GetConfiguredKeyboardManagerEnabledValue();
@@ -47,6 +48,7 @@ namespace Microsoft.PowerToys.Settings.UI.Helpers
                 case ModuleType.PowerOCR: return GPOWrapper.GetConfiguredTextExtractorEnabledValue();
                 case ModuleType.PowerDisplay: return GPOWrapper.GetConfiguredPowerDisplayEnabledValue();
                 case ModuleType.ZoomIt: return GPOWrapper.GetConfiguredZoomItEnabledValue();
+                case ModuleType.GrabAndMove: return GPOWrapper.GetConfiguredGrabAndMoveEnabledValue();
                 default: return GpoRuleConfigured.Unavailable;
             }
         }
@@ -67,6 +69,7 @@ namespace Microsoft.PowerToys.Settings.UI.Helpers
                 ModuleType.FancyZones => typeof(FancyZonesPage),
                 ModuleType.FileLocksmith => typeof(FileLocksmithPage),
                 ModuleType.FindMyMouse => typeof(MouseUtilsPage),
+                ModuleType.AltWindowCycle => typeof(AltWindowCyclePage),
                 ModuleType.GeneralSettings => typeof(GeneralPage),
                 ModuleType.Hosts => typeof(HostsPage),
                 ModuleType.ImageResizer => typeof(ImageResizerPage),
@@ -87,6 +90,7 @@ namespace Microsoft.PowerToys.Settings.UI.Helpers
                 ModuleType.PowerOCR => typeof(PowerOcrPage),
                 ModuleType.PowerDisplay => typeof(PowerDisplayPage),
                 ModuleType.ZoomIt => typeof(ZoomItPage),
+                ModuleType.GrabAndMove => typeof(GrabAndMovePage),
                 _ => typeof(DashboardPage), // never called, all values listed above
             };
         }

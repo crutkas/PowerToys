@@ -8,6 +8,10 @@ namespace winrt::PowerToys::GPOWrapper::implementation
     {
         return static_cast<GpoRuleConfigured>(powertoys_gpo::getConfiguredAlwaysOnTopEnabledValue());
     }
+    GpoRuleConfigured GPOWrapper::GetConfiguredAltWindowCycleEnabledValue()
+    {
+        return static_cast<GpoRuleConfigured>(powertoys_gpo::getConfiguredAltWindowCycleEnabledValue());
+    }
     GpoRuleConfigured GPOWrapper::GetConfiguredAwakeEnabledValue()
     {
         return static_cast<GpoRuleConfigured>(powertoys_gpo::getConfiguredAwakeEnabledValue());
@@ -35,6 +39,10 @@ namespace winrt::PowerToys::GPOWrapper::implementation
     GpoRuleConfigured GPOWrapper::GetConfiguredPowerDisplayEnabledValue()
     {
         return static_cast<GpoRuleConfigured>(powertoys_gpo::getConfiguredPowerDisplayEnabledValue());
+    }
+    GpoRuleConfigured GPOWrapper::GetConfiguredGrabAndMoveEnabledValue()
+    {
+        return static_cast<GpoRuleConfigured>(powertoys_gpo::getConfiguredGrabAndMoveEnabledValue());
     }
     GpoRuleConfigured GPOWrapper::GetConfiguredFancyZonesEnabledValue()
     {
@@ -171,6 +179,10 @@ namespace winrt::PowerToys::GPOWrapper::implementation
     GpoRuleConfigured GPOWrapper::GetDisableAutomaticUpdateDownloadValue()
     {
         return static_cast<GpoRuleConfigured>(powertoys_gpo::getDisableAutomaticUpdateDownloadValue());
+    }
+    GpoRuleConfigured GPOWrapper::GetDisablePreviewUpdatesValue()
+    {
+        return static_cast<GpoRuleConfigured>(powertoys_gpo::getDisablePreviewUpdatesValue());
     }
     GpoRuleConfigured GPOWrapper::GetDisableShowWhatsNewAfterUpdatesValue()
     {

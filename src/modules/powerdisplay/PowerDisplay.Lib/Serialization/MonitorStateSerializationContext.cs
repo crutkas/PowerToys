@@ -15,10 +15,12 @@ namespace PowerDisplay.Common.Serialization
     /// </summary>
     [JsonSourceGenerationOptions(
         WriteIndented = false,
-        DefaultIgnoreCondition = JsonIgnoreCondition.Never,
+        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
         IncludeFields = true)]
     [JsonSerializable(typeof(MonitorStateFile))]
     [JsonSerializable(typeof(MonitorStateEntry))]
+    [JsonSerializable(typeof(KnownGoodVcpFeature))]
+    [JsonSerializable(typeof(List<KnownGoodVcpFeature>))]
     [JsonSerializable(typeof(Dictionary<string, MonitorStateEntry>))]
     public partial class MonitorStateSerializationContext : JsonSerializerContext
     {

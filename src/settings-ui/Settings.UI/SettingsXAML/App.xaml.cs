@@ -416,6 +416,7 @@ namespace Microsoft.PowerToys.Settings.UI
                 case "Dashboard": return typeof(DashboardPage);
                 case "Overview": return typeof(GeneralPage);
                 case "AdvancedPaste": return typeof(AdvancedPastePage);
+                case "AltWindowCycle": return typeof(AltWindowCyclePage);
                 case "AlwaysOnTop": return typeof(AlwaysOnTopPage);
                 case "Awake": return typeof(AwakePage);
                 case "CmdNotFound": return typeof(CmdNotFoundPage);
@@ -447,6 +448,7 @@ namespace Microsoft.PowerToys.Settings.UI
                 case "Workspaces": return typeof(WorkspacesPage);
                 case "CmdPal": return typeof(CmdPalPage);
                 case "ZoomIt": return typeof(ZoomItPage);
+                case "GrabAndMove": return typeof(GrabAndMovePage);
                 default:
                     // Fallback to Dashboard
                     Debug.Assert(false, "Unexpected SettingsWindow argument value");
